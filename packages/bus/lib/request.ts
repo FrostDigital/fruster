@@ -8,13 +8,13 @@ import errors from "./util/errors";
 import utils from "./util/utils";
 
 // TODO: Is this needed? Move to other place?
-export interface RequestMessage {
+export interface RequestMessage<T = any> {
 	reqId: string;
-	data?: any;
+	data?: T;
 	transactionId?: string;
 }
 
-export interface TestRequestMessage extends Omit<RequestMessage, "reqId"> {
+export interface TestRequestMessage<T = any> extends Omit<RequestMessage<T>, "reqId"> {
 	reqId?: string;
 	query?: { [x: string]: string };
 	params?: { [x: string]: string };
@@ -22,9 +22,9 @@ export interface TestRequestMessage extends Omit<RequestMessage, "reqId"> {
 	user?: Partial<FrusterRequest["user"]>;
 }
 
-export interface RequestOptions {
+export interface RequestOptions<T = any> {
 	subject: string;
-	message: RequestMessage;
+	message: RequestMessage<T>;
 	timeout?: number;
 }
 
@@ -32,8 +32,8 @@ export interface RequestManyOptions extends RequestOptions {
 	maxResponses?: number;
 }
 
-export interface TestRequestOptions extends Omit<RequestOptions, "message"> {
-	message: TestRequestMessage;
+export interface TestRequestOptions<T = any> extends Omit<RequestOptions, "message"> {
+	message: TestRequestMessage<T>;
 }
 
 let natsClient: Client;
@@ -42,7 +42,7 @@ export const request = (client: Client) => {
 	natsClient = client;
 
 	return {
-		request: async (options: RequestOptions) => {
+		request: async <ReqData = any, ResData = any>(options: RequestOptions<ReqData>) => {
 			const res = await doRequest(options);
 
 			if (Array.isArray(res)) {
@@ -51,7 +51,7 @@ export const request = (client: Client) => {
 				);
 			}
 
-			return res as FrusterResponse;
+			return res as FrusterResponse<ResData>;
 		},
 		requestMany: async (options: RequestManyOptions) => {
 			if (!options.maxResponses) options.maxResponses = 10;
@@ -159,8 +159,6 @@ function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<Fr
 		}
 
 		if (utils.shouldCompressMessage(reqOptions.message)) {
-			// TODO
-			// @ts-ignore
 			reqOptions.message = await utils.compress(reqOptions.message);
 		}
 

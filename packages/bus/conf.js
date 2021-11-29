@@ -2,9 +2,6 @@ const uuid = require("uuid");
 const constants = require("./constants").default;
 
 module.exports = {
-	// Time we expect to get options respons
-	optionsTimeout: process.env.OPTIONS_TIMEOUT || "1s",
-
 	// Name of *this* service
 	serviceName: getServiceName(),
 
@@ -13,9 +10,6 @@ module.exports = {
 
 	// Generated id of service instance
 	instanceId: getServiceName() + "." + uuid.v4().substr(0, 8),
-
-	// Log level for incoming and outgoing messages
-	busLogLevel: (process.env.BUS_LOG_LEVEL || "silly").toLowerCase(),
 
 	// Whether or not to validate responses
 	responseValidation: process.env.RESPONSE_VALIDATION === "true",
@@ -31,6 +25,8 @@ module.exports = {
 	// If to disable that schemas are cached in memory when initialized multiple times
 	// This would in most cases be kept as true to speed up testing.
 	disableSchemaCache: process.env.DISABLE_SCHEMA_CACHE === "true",
+
+	logLevel: (process.env.LOG_LEVEL || "info").toLowerCase(),
 };
 
 function getServiceName() {

@@ -1,5 +1,5 @@
-const utils = require("../lib/util/utils");
-const constants = require("../constants").default;
+import utils from "../lib/util/utils";
+import constants from "../constants";
 
 describe("Utils", () => {
 	it("should parse HTTP subject", () => {

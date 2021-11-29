@@ -1,51 +1,35 @@
-const _ = require("lodash");
-const log = require("fruster-log");
+import _ from "lodash";
 const conf = require("../../conf");
-const constants = require("../../constants").default;
+import constants from "../../constants";
 const zlib = require("zlib");
 
 const ESCAPED_DOTS_STRING = "{dot}";
 const BASE_64 = "base64";
 
+const SILLY_LOG_LEVEL = "silly";
+
 const utils = {
-	/**
-	 * @param {Object} msg
-	 */
-	toString: (msg) => {
+	toString: (msg: any) => {
 		return JSON.stringify(msg);
 	},
 
-	/**
-	 * @param {Object} msg
-	 */
-	normalizeJSON: (msg) => {
+	normalizeJSON: (msg: any) => {
 		return JSON.parse(JSON.stringify(msg));
 	},
 
-	/**
-	 * @param {Object} msg
-	 */
-	isError: (msg) => {
+	isError: (msg: object & { status: number; error?: any }) => {
 		return msg.status >= 400 || !_.isEmpty(msg.error);
 	},
 
-	/**
-	 * @param {String} subject
-	 * @param {Object} msg
-	 */
-	logIncomingMessage: (subject, msg = {}) => {
-		if (log.transports.console.level === conf.busLogLevel) {
-			log[conf.busLogLevel](`[SUB] [${msg.transactionId}] [${subject}] ${JSON.stringify(msg)}`);
+	logIncomingMessage: (subject: string, msg: any) => {
+		if (conf.logLevel === SILLY_LOG_LEVEL) {
+			console.log(`[SUB] [${msg.transactionId}] [${subject}] ${JSON.stringify(msg)}`);
 		}
 	},
 
-	/**
-	 * @param {String} subject
-	 * @param {Object} msg
-	 */
-	logOutgoingMessage: (subject, msg = {}) => {
-		if (log.transports.console.level == conf.busLogLevel) {
-			log[conf.busLogLevel](`[PUB] [${msg.transactionId}] [${subject}] ${JSON.stringify(msg)}`);
+	logOutgoingMessage: (subject: string, msg: any) => {
+		if (conf.logLevel === SILLY_LOG_LEVEL) {
+			console.log(`[PUB] [${msg.transactionId}] [${subject}] ${JSON.stringify(msg)}`);
 		}
 	},
 
@@ -55,7 +39,7 @@ const utils = {
 	 *
 	 * @param {String} subject
 	 */
-	parseSubject: (subject) => {
+	parseSubject: (subject: string) => {
 		const subjectSplit = subject.split(".");
 		const isHTTP = subject.indexOf("http.") == 0;
 
@@ -87,8 +71,8 @@ const utils = {
 	 *
 	 * @return {Object<String, String>} params object
 	 */
-	parseParams: (subject, actualSubject) => {
-		const paramValues = {};
+	parseParams: (subject: string, actualSubject: string) => {
+		const paramValues: any = {};
 		const subjectParts = subject.split(".");
 
 		const actualSubjectParts = actualSubject.split(".");
@@ -113,7 +97,7 @@ const utils = {
 	 *
 	 * @return {Object} message with "from" set
 	 */
-	setFromMetadata: (msg) => {
+	setFromMetadata: (msg: any) => {
 		msg.from = {
 			service: conf.serviceName,
 			instanceId: conf.instanceId,
@@ -129,9 +113,9 @@ const utils = {
 	 * @param {Object} msg (req or response)
 	 * @returns {Promise<Object>} message with compressed data
 	 */
-	compress: (msg) => {
-		return new Promise((resolve, reject) => {
-			zlib.deflate(JSON.stringify(msg.data), (err, deflatedData) => {
+	compress: (msg: any) => {
+		return new Promise<any & { data: string; dataEncoding: string }>((resolve, reject) => {
+			zlib.deflate(JSON.stringify(msg.data), (err: any, deflatedData: any) => {
 				if (err) {
 					return reject(err);
 				}
@@ -150,11 +134,11 @@ const utils = {
 	 *
 	 * @param {String} compressedData to be inflated
 	 */
-	decompress: (compressedData) => {
+	decompress: (compressedData: string) => {
 		return new Promise((resolve, reject) => {
 			const buffer = new Buffer(compressedData, BASE_64);
 
-			zlib.inflate(buffer, (err, res) => {
+			zlib.inflate(buffer, (err: any, res: any) => {
 				if (err) {
 					return reject(err);
 				}
@@ -170,7 +154,7 @@ const utils = {
 	 * @param {Object} msg
 	 * @returns {Boolean} true is message data should be compressed
 	 */
-	shouldCompressMessage: (msg) => {
+	shouldCompressMessage: (msg: any) => {
 		return (
 			msg.dataEncoding === constants.CONTENT_ENCODING_GZIP ||
 			(conf.compressionStrategy === constants.COMPRESSION_STRATEGY_AUTO &&
@@ -185,7 +169,7 @@ const utils = {
 	 * @param {String} subject
 	 * @param {String} pattern
 	 */
-	matchSubject: (subject, pattern) => {
+	matchSubject: (subject: string, pattern: string) => {
 		if (subject === pattern || pattern === ">") {
 			return true;
 		}
@@ -203,7 +187,7 @@ const utils = {
 				break;
 			}
 
-			match = subjectSplit[i] === patternSplit[i] || (patternSplit[i] === "*" && subjectSplit[i]);
+			match = subjectSplit[i] === patternSplit[i] || (patternSplit[i] === "*" && !!subjectSplit[i]);
 			i++;
 		}
 
@@ -211,4 +195,4 @@ const utils = {
 	},
 };
 
-module.exports = utils;
+export default utils;

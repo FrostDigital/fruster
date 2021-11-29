@@ -5,7 +5,7 @@ import { FrusterRequest } from "./model/FrusterRequest";
 import { FrusterResponse } from "./model/FrusterResponse";
 import * as schemas from "./schemas";
 import subscribeCache from "./subscribe-cache";
-const utils = require("./util/utils");
+import utils from "./util/utils";
 const errors = require("./util/errors");
 const conf = require("../conf");
 import constants from "../constants";
@@ -96,7 +96,11 @@ const defaultOptions = {
 	},
 };
 
-export type HandleFn<ReqData = any> = (jsonMsg: FrusterRequest<ReqData>, replyTo: string, actualSubject: string) => any;
+export type HandleFn<ReqData = any> = (
+	jsonMsg: FrusterRequest<ReqData>,
+	replyTo: string,
+	actualSubject: string
+) => Promise<Partial<FrusterResponse>> | Partial<FrusterResponse> | void;
 
 export class Subscribe {
 	options: SubscribeOptions;

@@ -1,11 +1,11 @@
 import nats from "nats";
 import uuid from "uuid";
-import { FrusterResponse } from "..";
 import conf from "../conf";
 import constants from "../constants";
 import MetadataHandler from "./MetadataHandler";
 import { ConnectedClient, ConnectOptions } from "./model/ConnectedClient";
 import { FrusterRequest } from "./model/FrusterRequest";
+import { FrusterResponse } from "./model/FrusterResponse";
 import { publish as publishBuilder, PublishOptions } from "./publish";
 import { request as requestBuilder, RequestManyOptions, RequestOptions, TestRequestOptions } from "./request";
 import * as schemas from "./schemas";
@@ -73,7 +73,7 @@ class FrusterBus {
 		throw new Error("There are no connected client(s)");
 	}
 
-	request(options: RequestOptions): Promise<FrusterResponse> {
+	request<ReqData = any, ResData = any>(options: RequestOptions<ReqData>): Promise<FrusterResponse<ResData>> {
 		// Note: Method is set when client is connected
 		throw new Error("There are no connected client(s)");
 	}
@@ -231,7 +231,7 @@ class TestBus {
 		return this.bus.subscribe(options, cb);
 	}
 
-	request(options: TestRequestOptions) {
+	request<ReqData = any, ResData = any>(options: TestRequestOptions<ReqData>): Promise<FrusterResponse<ResData>> {
 		return this.bus.request({
 			...options,
 			message: { ...options.message, reqId: options.message.reqId || uuid.v4() },

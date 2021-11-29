@@ -2,8 +2,8 @@ import Ajv, { AdditionalPropertiesParams, Ajv as AjvType } from "ajv";
 import fs from "fs-extra";
 import path from "path";
 import crypto from "crypto";
+import utils from "./util/utils";
 
-const utils = require("./util/utils");
 const errors = require("./util/errors");
 const conf = require("../conf");
 

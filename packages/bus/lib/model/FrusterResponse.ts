@@ -21,7 +21,7 @@ export interface FrusterResponse<T = any> {
 	 */
 	transactionId: Readonly<string>;
 
-	data?: T;
+	data: T;
 
 	/**
 	 * Error data, set if response is an error
