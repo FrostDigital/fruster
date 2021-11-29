@@ -1,0 +1,9 @@
+{
+	"id": "car-additional-properties",
+	"additionalProperties": false,
+	"properties": {
+		"type": {
+			"type": "string"
+		}
+	}
+}

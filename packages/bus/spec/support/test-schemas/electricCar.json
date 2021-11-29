@@ -1,0 +1,15 @@
+{	
+	"id": "electricCar",
+	"allOf": [	    
+	    { 
+	    	"$ref": "car"	    	
+	    },
+	    {	
+	    	"properties": {
+	    		"watt": {
+	    			"type": "integer"
+	    		}
+	    	}
+	    }
+	]
+}

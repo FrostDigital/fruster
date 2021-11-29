@@ -1,0 +1,34 @@
+{
+  "name": "@fruster/log",
+  "version": "1.0.0",
+  "description": "Logger for Fruster (micro) services",
+  "main": "index.js",
+  "private": false,
+  "types": "fruster-log.d.ts",
+  "scripts": {
+    "test": "node ./spec/support/jasmine-runner.js"
+  },
+  "keywords": [
+    "fruster"
+  ],
+  "author": "joel@frostdigital.se",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FrostDigital/fruster-log-js.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "moment": "^2.29.1",
+    "moment-timezone": "^0.5.33",
+    "uuid": "^3.1.0",
+    "winston": "^2.2.0",
+    "winston-papertrail": "^1.0.5"
+  },
+  "devDependencies": {
+    "@types/jasmine": "^2.8.5",
+    "@fruster/bus": "*",
+    "fruster-test-utils": "^0.6.5",
+    "jasmine": "^2.4.1",
+    "jasmine-spec-reporter": "^2.7.0"
+  }
+}

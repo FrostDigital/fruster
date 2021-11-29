@@ -1,0 +1,58 @@
+{
+	"name": "@fruster/bus",
+	"version": "1.0.0",
+	"description": "NATS message bus helper for Fruster micro services",
+	"main": "index.js",
+	"types": "dist/index.d.ts",
+	"private": false,
+	"scripts": {
+		"test": "nyc --reporter=html --check-coverage --lines 90 ts-node --transpile-only ./spec/support/jasmine-runner.ts",
+		"build": "tsc --project tsconfig.dist.json",
+		"prepublish": "tsc --project tsconfig.dist.json"
+	},
+	"contributors": [
+		"Joel Söderström <joel@frost.se>",
+		"Florry <viktor@frost.se>",
+		"Jessica Larsson <jessica@frost.se>",
+		"Nils Kullberg <nils@frost.se>",
+		"Dinuka Thilanga <dinuka@frost.se>"
+	],
+	"license": "MIT",
+	"dependencies": {
+		"ajv": "^5.5.0",
+		"fruster-errors": "^0.1.2",
+		"fs-extra": "^8.0.1",
+		"lodash": "^4.17.11",
+		"mock-nats-client": "^0.2.0",
+		"ms": "^2.1.1",
+		"nats": "^1.4.12",
+		"request": "^2.88.0",
+		"uuid": "^3.3.2"
+	},
+	"devDependencies": {
+		"@types/fs-extra": "^9.0.13",
+		"@types/jasmine": "^3.10.2",
+		"@types/lodash": "^4.14.177",
+		"@types/ms": "^0.7.31",
+		"@types/node": "^16.11.10",
+		"@types/request": "^2.48.7",
+		"@types/uuid": "^8.3.3",
+		"body-parser": "^1.19.0",
+		"express": "^4.17.0",
+		"jasmine": "^3.10.0",
+		"jasmine-spec-reporter": "^7.0.0",
+		"nats-server-control": "0.0.1",
+		"nyc": "^14.1.1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/FrostDigital/fruster-bus-js.git"
+	},
+	"nyc": {
+		"exclude": [
+			"index.js",
+			"lib/model/*",
+			"spec"
+		]
+	}
+}

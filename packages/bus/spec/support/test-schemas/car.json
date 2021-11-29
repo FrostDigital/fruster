@@ -1,0 +1,22 @@
+{
+	"id": "car",
+	"properties": {
+		"id": {
+			"type": "string",
+			"format": "uuid"
+		},
+		"brand": {
+			"type": "string",
+			"enum": ["audi", "volvo", "bmw", "saab"]
+		},
+		"doors": {
+			"type": "integer",
+			"maximum": 5,
+			"minimum": 3
+		},
+		"created": {
+			"type": "string",
+			"format": "date-time"
+		}	
+	}
+}
