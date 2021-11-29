@@ -3,9 +3,9 @@ import fs from "fs-extra";
 import path from "path";
 import crypto from "crypto";
 import utils from "./util/utils";
+import conf from "../conf";
 
 const errors = require("./util/errors");
-const conf = require("../conf");
 
 // export const schemas = {};
 let parsedSchemas: any = [];

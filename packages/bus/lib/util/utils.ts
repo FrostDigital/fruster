@@ -1,5 +1,5 @@
 import _ from "lodash";
-const conf = require("../../conf");
+import conf from "../../conf";
 import constants from "../../constants";
 const zlib = require("zlib");
 
@@ -161,6 +161,10 @@ const utils = {
 				msg.data &&
 				utils.toString(msg.data).length > conf.compressTreshold)
 		);
+	},
+
+	shouldChunkMessage: (msg: any) => {
+		return utils.toString(msg.data).length > conf.compressTreshold;
 	},
 
 	/**

@@ -13,7 +13,7 @@ describe("Chunking", () => {
 		bus.closeAll();
 	});
 
-	fit("should chunk large messages", async () => {
+	it("should chunk large messages", async () => {
 		const subject = "chunky-salsa";
 		const largeMessage = foo[0] + foo[0];
 

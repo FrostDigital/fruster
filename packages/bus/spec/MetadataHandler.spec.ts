@@ -1,7 +1,7 @@
 import { startNatsServerAndConnectBus, TestConnection } from "./support/test-utils";
 import bus from "../index";
 import constants from "../constants";
-const conf = require("../conf");
+import conf from "../conf";
 
 describe("MetadataHandler", () => {
 	let natsConnection: TestConnection;

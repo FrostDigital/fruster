@@ -1,6 +1,6 @@
 import { startNatsServerAndConnectBus, TestConnection } from "./support/test-utils";
 import bus from "../index";
-const conf = require("../conf");
+import conf from "../conf";
 
 describe("Fruster bus validation", function () {
 	let natsConnection: TestConnection;

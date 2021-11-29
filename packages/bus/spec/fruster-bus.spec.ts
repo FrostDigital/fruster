@@ -2,8 +2,7 @@ import uuid from "uuid";
 import constants from "../constants";
 import bus, { version } from "../index";
 import { startNatsServerAndConnectBus, TestConnection } from "./support/test-utils";
-
-const conf = require("../conf");
+import conf from "../conf";
 
 conf.serviceName = "fake-service";
 

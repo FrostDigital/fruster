@@ -1,6 +1,6 @@
 import uuid from "uuid";
 import bus from "../index";
-const conf = require("../conf");
+import conf from "../conf";
 
 conf.serviceName = "fake-service";
 

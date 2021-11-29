@@ -1,7 +1,7 @@
-const uuid = require("uuid");
-const constants = require("./constants").default;
+import uuid from "uuid";
+import constants from "./constants";
 
-module.exports = {
+export default {
 	// Name of *this* service
 	serviceName: getServiceName(),
 

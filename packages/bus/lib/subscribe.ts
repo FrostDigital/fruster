@@ -7,7 +7,7 @@ import * as schemas from "./schemas";
 import subscribeCache from "./subscribe-cache";
 import utils from "./util/utils";
 const errors = require("./util/errors");
-const conf = require("../conf");
+import conf from "../conf";
 import constants from "../constants";
 import { publish as publishBuilder, PublishOptions } from "./publish";
 
@@ -283,7 +283,7 @@ export class Subscribe {
 
 			if (response && replyTo) {
 				if (isPromise(response)) {
-					response
+					(response as Promise<FrusterResponse>)
 						.then((resolvedResponse: FrusterResponse) => {
 							if (utils.isError(resolvedResponse)) {
 								// TODO: Use handle error here instead?
@@ -298,6 +298,7 @@ export class Subscribe {
 						})
 						.catch((err: any) => this.handleError(err, jsonMsg, replyTo));
 				} else {
+					response = response as FrusterResponse;
 					response.transactionId = jsonMsg.transactionId;
 					response.reqId = jsonMsg.reqId;
 					response.ms = Date.now() - startTime;
