@@ -2,22 +2,13 @@ import { Client } from "nats";
 import uuid from "uuid";
 import conf from "../conf";
 import constants from "../constants";
-import { FrusterResponse } from "./model/FrusterResponse";
 import { FrusterRequest } from "./model/FrusterRequest";
+import { FrusterResponse } from "./model/FrusterResponse";
 import errors from "./util/errors";
 import utils from "./util/utils";
-import { sendChunks } from "./chunking";
 
-// TODO: Is this needed? Move to other place?
-export interface RequestMessage<T = any> {
-	reqId: string;
-	data?: T;
-	transactionId?: string;
-	chunks?: number;
-	dataEncoding?: "gzip";
-}
-
-export interface TestRequestMessage<T = any> extends Omit<RequestMessage<T>, "reqId"> {
+export interface TestRequestMessage<T = any>
+	extends Omit<FrusterRequest<T>, "reqId" | "user" | "query" | "params" | "headers" | "transactionId"> {
 	reqId?: string;
 	query?: { [x: string]: string };
 	params?: { [x: string]: string };
@@ -27,7 +18,7 @@ export interface TestRequestMessage<T = any> extends Omit<RequestMessage<T>, "re
 
 export interface RequestOptions<T = any> {
 	subject: string;
-	message: FrusterRequest<T>;
+	message: Omit<FrusterRequest<T>, "method" | "path" | "from">;
 	timeout?: number;
 }
 

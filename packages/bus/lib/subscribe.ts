@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { Client } from "nats";
 import uuid from "uuid";
-import { FrusterRequest } from "./model/FrusterRequest";
+import { FrusterRequest, ImmutableFrusterRequest } from "./model/FrusterRequest";
 import { FrusterResponse } from "./model/FrusterResponse";
 import * as schemas from "./schemas";
 import subscribeCache from "./subscribe-cache";
@@ -97,7 +97,7 @@ const defaultOptions = {
 };
 
 export type HandleFn<ReqData = any> = (
-	jsonMsg: FrusterRequest<ReqData>,
+	jsonMsg: ImmutableFrusterRequest<ReqData>,
 	replyTo: string,
 	actualSubject: string
 ) => Promise<Partial<FrusterResponse>> | Partial<FrusterResponse> | void;

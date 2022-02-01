@@ -9,13 +9,13 @@ const conf = {
 	schemasPath: process.env.SCHEMAS_PATH || "/lib/schemas",
 
 	// Generated id of service instance
-	instanceId: getServiceName() + "." + uuid.v4().substr(0, 8),
+	instanceId: getServiceName() + "." + uuid.v4().substring(0, 8),
 
 	// Whether or not to validate responses
 	responseValidation: process.env.RESPONSE_VALIDATION === "true",
 
-	// Treshold for when fruster-bus will compress (gzip) data
-	compressTreshold: parseInt(process.env.COMPRESS_TRESHOLD || 1024 * 900 + ""),
+	// Threshold for when fruster-bus will compress (gzip) data
+	compressThreshold: parseInt(process.env.COMPRESS_THRESHOLD || 1024 * 900 + ""),
 
 	// Chunks size, if message needs to be chunked each message data will be
 	// max this size
@@ -27,7 +27,7 @@ const conf = {
 
 	// How fruster-bus will handle compression of data
 	// `manual` - compression will only be done if `dataEncoding` is set to a supported value (currently only `gzip` is supported)
-	// `auto` - compression will happen automatically based on outgoing message size as configured in `COMPRESS_TRESHOLD`
+	// `auto` - compression will happen automatically based on outgoing message size as configured in `COMPRESS_THRESHOLD`
 	compressionStrategy: process.env.COMPRESSION_STRATEGY || constants.COMPRESSION_STRATEGY_AUTO,
 
 	// If to disable that schemas are cached in memory when initialized multiple times
@@ -41,10 +41,10 @@ function getServiceName() {
 	return process.env.SERVICE_NAME || process.env.DEIS_APP || "n/a";
 }
 
-if (conf.compressTreshold > conf.chunkSize) {
+if (conf.compressThreshold > conf.chunkSize) {
 	// Chunking should only be used after data has been compressed
 	throw new Error(
-		`COMPRESS_TRESHOLD must be less than or equal CHUNK_TRESHOLD, current values are ${conf.compressTreshold} and ${conf.chunkTreshold}`
+		`COMPRESS_THRESHOLD must be less than or equal CHUNK_SIZE, current values are ${conf.compressThreshold} and ${conf.chunkSize}`
 	);
 }
 

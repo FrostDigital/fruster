@@ -5,24 +5,19 @@
  */
 export interface FrusterRequest<T = any> {
 	/**
-	 * Request id
+	 * Request id.
+	 *
+	 * Identifier for whole message sequence. Request id should be passed
+	 * thru to subsequent messages.
 	 */
 	reqId: string;
 
 	/**
-	 * Transaction id
+	 * Transaction id.
+	 *
+	 * Identifies a request - response pair.
 	 */
-	transactionId: Readonly<string>;
-
-	/**
-	 * Method used if request was HTTP
-	 */
-	method: string; // TODO: Optional?
-
-	/**
-	 * Path used for reqruest if request was HTTP
-	 */
-	path: string; // TODO: Optional?
+	transactionId: string;
 
 	/**
 	 * Request body
@@ -32,30 +27,32 @@ export interface FrusterRequest<T = any> {
 	/**
 	 * Logged in user
 	 */
-	user: object & { id: string; scopes: string[] }; // TODO: Optional?
+	user?: object & { id: string; scopes: string[] };
+
+	/**
+	 * Path used for request if request was HTTP
+	 */
+	path?: string;
+
+	/**
+	 * Method used if request was HTTP
+	 */
+	method?: string;
 
 	/**
 	 * HTTP query params
 	 */
-	query: { [x: string]: string }; // TODO: Optional?
+	query: { [x: string]: string };
 
 	/**
 	 * HTTP path params
 	 */
-	params: { [x: string]: string }; // TODO: Optional?
+	params: { [x: string]: string };
 
 	/**
 	 * HTTP headers
 	 */
-	headers: { [x: string]: string }; // TODO: Optional?
-
-	/**
-	 * Information where response came from
-	 */
-	from: Readonly<{
-		service: string;
-		instanceId: String;
-	}>;
+	headers: { [x: string]: string };
 
 	/**
 	 * Optional encoding
@@ -67,4 +64,60 @@ export interface FrusterRequest<T = any> {
 	 * that the request will be slit up into smaller pieces.
 	 */
 	chunks?: number;
+}
+
+export interface ImmutableFrusterRequest<T = any> extends FrusterRequest<T> {
+	/**
+	 * Request id
+	 */
+	reqId: Readonly<string>;
+
+	/**
+	 * Transaction id
+	 */
+	transactionId: Readonly<string>;
+
+	/**
+	 * Path used for request if request was HTTP
+	 */
+	path?: Readonly<string>;
+
+	/**
+	 * Method used if request was HTTP
+	 */
+	method?: Readonly<string>;
+
+	/**
+	 * HTTP query params
+	 */
+	query: Readonly<{ [x: string]: string }>;
+
+	/**
+	 * HTTP path params
+	 */
+	params: Readonly<{ [x: string]: string }>;
+
+	/**
+	 * HTTP headers
+	 */
+	headers: Readonly<{ [x: string]: string }>;
+
+	/**
+	 * Optional encoding
+	 */
+	dataEncoding?: Readonly<string>;
+
+	/**
+	 * Number of data chunks if data payload is large and requires chunking, meaning
+	 * that the request will be slit up into smaller pieces.
+	 */
+	chunks?: Readonly<number>;
+
+	/**
+	 * Information where response came from
+	 */
+	from?: Readonly<{
+		service: string;
+		instanceId: String;
+	}>;
 }

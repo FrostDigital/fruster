@@ -234,7 +234,15 @@ class TestBus {
 	request<ReqData = any, ResData = any>(options: TestRequestOptions<ReqData>): Promise<FrusterResponse<ResData>> {
 		return this.bus.request({
 			...options,
-			message: { ...options.message, reqId: options.message.reqId || uuid.v4() },
+			message: {
+				...options.message,
+				query: options.message.query || {},
+				params: options.message.query || {},
+				headers: options.message.headers || {},
+				user: (options.message.user as FrusterRequest["user"]) || undefined,
+				reqId: options.message.reqId || uuid.v4(),
+				transactionId: uuid.v4(),
+			},
 		});
 	}
 

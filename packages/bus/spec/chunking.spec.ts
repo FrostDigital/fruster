@@ -6,17 +6,17 @@ import { startNatsServerAndConnectBus } from "./support/test-utils";
 const { testBus } = bus;
 
 describe("Chunking", () => {
-	let oldCompressTreshold = conf.compressTreshold;
+	let oldCompressThreshold = conf.compressThreshold;
 	let oldChunkSize = conf.chunkSize;
 
 	beforeAll(async () => {
-		conf.compressTreshold = 10;
+		conf.compressThreshold = 10;
 		conf.chunkSize = 10;
 		await startNatsServerAndConnectBus();
 	});
 
 	afterAll(() => {
-		conf.compressTreshold = oldCompressTreshold;
+		conf.compressThreshold = oldCompressThreshold;
 		conf.chunkSize = oldChunkSize;
 
 		bus.closeAll();

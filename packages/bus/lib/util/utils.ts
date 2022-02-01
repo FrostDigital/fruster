@@ -167,7 +167,7 @@ const utils = {
 			msg.dataEncoding === constants.CONTENT_ENCODING_GZIP ||
 			(conf.compressionStrategy === constants.COMPRESSION_STRATEGY_AUTO &&
 				msg.data &&
-				utils.toString(msg.data).length > conf.compressTreshold)
+				utils.toString(msg.data).length > conf.compressThreshold)
 		);
 	},
 
