@@ -2,13 +2,16 @@ import { Client } from "nats";
 import uuid from "uuid";
 import conf from "../conf";
 import constants from "../constants";
-import { FrusterRequest } from "./model/FrusterRequest";
+import { FrusterRequest, FrusterRequestWithOptionalData } from "./model/FrusterRequest";
 import { FrusterResponse } from "./model/FrusterResponse";
 import errors from "./util/errors";
 import utils from "./util/utils";
 
 export interface TestRequestMessage<T = any>
-	extends Omit<FrusterRequest<T>, "reqId" | "user" | "query" | "params" | "headers" | "transactionId"> {
+	extends Omit<
+		FrusterRequestWithOptionalData<T>,
+		"reqId" | "user" | "query" | "params" | "headers" | "transactionId"
+	> {
 	reqId?: string;
 	query?: { [x: string]: string };
 	params?: { [x: string]: string };
@@ -18,7 +21,7 @@ export interface TestRequestMessage<T = any>
 
 export interface RequestOptions<T = any> {
 	subject: string;
-	message: Omit<FrusterRequest<T>, "method" | "path" | "from">;
+	message: FrusterRequestWithOptionalData<T>;
 	timeout?: number;
 }
 
@@ -171,7 +174,7 @@ function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<Fr
 
 		if (reqOptions.message.dataEncoding === "gzip") {
 			// Note: Chunking is only available after compression has been done
-			chunks = utils.calcChunks(reqOptions.message);
+			chunks = utils.calcChunks(reqOptions.message.data);
 
 			if (chunks.length) {
 				// Set first chunk as data in request and then send next ones

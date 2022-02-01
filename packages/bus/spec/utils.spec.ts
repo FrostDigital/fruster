@@ -1,5 +1,6 @@
 import utils from "../lib/util/utils";
 import constants from "../constants";
+import { FrusterRequest } from "..";
 
 describe("Utils", () => {
 	it("should parse HTTP subject", () => {
@@ -44,7 +45,7 @@ describe("Utils", () => {
 	it("should compress and decompress json", async () => {
 		const data = { foo: "bar" };
 
-		const compressedMessage = await utils.compress({ data });
+		const compressedMessage = await utils.compress({ data } as FrusterRequest);
 		expect(compressedMessage.data).toBeDefined();
 		expect(compressedMessage.dataEncoding).toBe(constants.CONTENT_ENCODING_GZIP);
 
@@ -53,12 +54,7 @@ describe("Utils", () => {
 	});
 
 	it("should calculate chunks", () => {
-		const chunks = utils.calcChunks(
-			{
-				data: "012345678",
-			},
-			2
-		);
+		const chunks = utils.calcChunks("012345678", 2);
 
 		expect(chunks.length).toBe(5);
 		expect(chunks[0]).toBe("01");

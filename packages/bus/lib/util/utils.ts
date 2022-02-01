@@ -1,5 +1,6 @@
 import _ from "lodash";
-import { FrusterRequest } from "../..";
+import { FrusterResponse } from "../model/FrusterResponse";
+import { FrusterRequest, FrusterRequestWithOptionalData } from "../model/FrusterRequest";
 import conf from "../../conf";
 import constants from "../../constants";
 const zlib = require("zlib");
@@ -121,7 +122,7 @@ const utils = {
 	 * @param {Object} msg (req or response)
 	 * @returns {Promise<Object>} message with compressed data
 	 */
-	compress: (msg: { data: any; dataEncoding?: FrusterRequest["dataEncoding"] }) => {
+	compress: (msg: FrusterRequestWithOptionalData | FrusterResponse) => {
 		return new Promise<any & { data: string; dataEncoding: string }>((resolve, reject) => {
 			zlib.deflate(JSON.stringify(msg.data), (err: any, deflatedData: any) => {
 				if (err) {
@@ -162,7 +163,7 @@ const utils = {
 	 * @param {Object} msg
 	 * @returns {Boolean} true is message data should be compressed
 	 */
-	shouldCompressMessage: (msg: any) => {
+	shouldCompressMessage: (msg: FrusterRequestWithOptionalData | FrusterResponse) => {
 		return (
 			msg.dataEncoding === constants.CONTENT_ENCODING_GZIP ||
 			(conf.compressionStrategy === constants.COMPRESSION_STRATEGY_AUTO &&
@@ -171,8 +172,8 @@ const utils = {
 		);
 	},
 
-	calcChunks: (msg: { data: string }, chunkSize = conf.chunkSize) => {
-		const length = msg.data.length;
+	calcChunks: (data: string, chunkSize = conf.chunkSize) => {
+		const length = data.length;
 
 		if (length <= chunkSize) {
 			return [];
@@ -183,7 +184,7 @@ const utils = {
 		let chunks: string[] = [];
 
 		for (let i = 0; i < numChunks; i++) {
-			chunks[i] = msg.data.substring(i * chunkSize, Math.min(i * chunkSize + chunkSize, length));
+			chunks[i] = data.substring(i * chunkSize, Math.min(i * chunkSize + chunkSize, length));
 		}
 
 		return chunks;

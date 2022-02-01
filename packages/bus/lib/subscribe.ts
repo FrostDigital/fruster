@@ -281,7 +281,7 @@ export class Subscribe {
 				jsonMsg.headers = jsonMsg.headers || {};
 				jsonMsg.params = jsonMsg.params || {};
 
-				response = this.handleFunction(jsonMsg, replyTo, actualSubject);
+				response = this.handleFunction(jsonMsg as ImmutableFrusterRequest, replyTo, actualSubject);
 			} catch (err) {
 				this.handleError(err, jsonMsg, replyTo);
 				return;

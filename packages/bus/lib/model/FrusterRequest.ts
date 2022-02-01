@@ -15,9 +15,10 @@ export interface FrusterRequest<T = any> {
 	/**
 	 * Transaction id.
 	 *
-	 * Identifies a request - response pair.
+	 * Identifies a request - response pair. Is generated and set when
+	 * request is created.
 	 */
-	transactionId: string;
+	transactionId?: string;
 
 	/**
 	 * Request body
@@ -42,17 +43,17 @@ export interface FrusterRequest<T = any> {
 	/**
 	 * HTTP query params
 	 */
-	query: { [x: string]: string };
+	query?: { [x: string]: string };
 
 	/**
 	 * HTTP path params
 	 */
-	params: { [x: string]: string };
+	params?: { [x: string]: string };
 
 	/**
 	 * HTTP headers
 	 */
-	headers: { [x: string]: string };
+	headers?: { [x: string]: string };
 
 	/**
 	 * Optional encoding
@@ -64,6 +65,10 @@ export interface FrusterRequest<T = any> {
 	 * that the request will be slit up into smaller pieces.
 	 */
 	chunks?: number;
+}
+
+export interface FrusterRequestWithOptionalData<T = any> extends Omit<FrusterRequest<T>, "data"> {
+	data?: T;
 }
 
 export interface ImmutableFrusterRequest<T = any> extends FrusterRequest<T> {
@@ -116,7 +121,7 @@ export interface ImmutableFrusterRequest<T = any> extends FrusterRequest<T> {
 	/**
 	 * Information where response came from
 	 */
-	from?: Readonly<{
+	from: Readonly<{
 		service: string;
 		instanceId: String;
 	}>;

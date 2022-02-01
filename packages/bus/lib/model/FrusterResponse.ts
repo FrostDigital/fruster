@@ -19,7 +19,7 @@ export interface FrusterResponse<T = any> {
 	/**
 	 * Transaction id
 	 */
-	transactionId: Readonly<string>;
+	transactionId?: string;
 
 	data: T;
 
