@@ -61,4 +61,10 @@ export interface FrusterRequest<T = any> {
 	 * Optional encoding
 	 */
 	dataEncoding?: string;
+
+	/**
+	 * Number of data chunks if data payload is large and requires chunking, meaning
+	 * that the request will be slit up into smaller pieces.
+	 */
+	chunks?: number;
 }

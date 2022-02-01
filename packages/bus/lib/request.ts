@@ -6,12 +6,15 @@ import { FrusterResponse } from "./model/FrusterResponse";
 import { FrusterRequest } from "./model/FrusterRequest";
 import errors from "./util/errors";
 import utils from "./util/utils";
+import { sendChunks } from "./chunking";
 
 // TODO: Is this needed? Move to other place?
 export interface RequestMessage<T = any> {
 	reqId: string;
 	data?: T;
 	transactionId?: string;
+	chunks?: number;
+	dataEncoding?: "gzip";
 }
 
 export interface TestRequestMessage<T = any> extends Omit<RequestMessage<T>, "reqId"> {
@@ -24,7 +27,7 @@ export interface TestRequestMessage<T = any> extends Omit<RequestMessage<T>, "re
 
 export interface RequestOptions<T = any> {
 	subject: string;
-	message: RequestMessage<T>;
+	message: FrusterRequest<T>;
 	timeout?: number;
 }
 
@@ -92,7 +95,20 @@ function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<Fr
 
 		const responses: FrusterResponse[] = [];
 
+		let chunks: string[] = [];
+
 		const sid = natsClient.subscribe(replyTo, {}, async (jsonResp: FrusterResponse) => {
+			if (jsonResp.dataSubject) {
+				// When `dataSubject` it indicated that additional chunks should be sent to this subject
+				// Once done, the requesting service will eventually come back with response to this same subject.
+				let i = 0;
+				for (const chunk of chunks) {
+					natsClient.publish(jsonResp.dataSubject, { reqId: jsonResp.reqId, data: chunk, chunk: i });
+					i++;
+				}
+				return;
+			}
+
 			if (jsonResp.dataEncoding) {
 				if (jsonResp.dataEncoding === constants.CONTENT_ENCODING_GZIP) {
 					jsonResp.data = await utils.decompress(jsonResp.data);
@@ -162,10 +178,29 @@ function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<Fr
 			reqOptions.message = await utils.compress(reqOptions.message);
 		}
 
+		if (reqOptions.message.dataEncoding === "gzip") {
+			// Note: Chunking is only available after compression has been done
+			chunks = utils.calcChunks(reqOptions.message);
+
+			if (chunks.length) {
+				// Set first chunk as data in request and then send next ones
+				// when requesting service returns `dataSubject` in the reply to handler
+				reqOptions.message.chunks = chunks.length;
+				reqOptions.message.data = {};
+			}
+		}
+
 		natsClient.publish(reqOptions.subject, reqOptions.message, replyTo);
 	});
 }
 
+/**
+ * Constructs a reply-to subject that the response from requesting service will send to.
+ *
+ * @param subject
+ * @param transactionId
+ * @returns
+ */
 function createReplyToSubject(subject: string, transactionId: string) {
 	return `res.${transactionId}.${subject}`;
 }

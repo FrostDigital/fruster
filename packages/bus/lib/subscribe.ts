@@ -5,7 +5,7 @@ import { FrusterRequest } from "./model/FrusterRequest";
 import { FrusterResponse } from "./model/FrusterResponse";
 import * as schemas from "./schemas";
 import subscribeCache from "./subscribe-cache";
-import utils from "./util/utils";
+import utils, { ParsedSubject } from "./util/utils";
 const errors = require("./util/errors");
 import conf from "../conf";
 import constants from "../constants";
@@ -109,7 +109,7 @@ export class Subscribe {
 
 	private natsSubscribeOptions?: { queue: string };
 
-	private parsedSubject?: any;
+	private parsedSubject?: ParsedSubject;
 
 	private sid?: number;
 
@@ -202,14 +202,14 @@ export class Subscribe {
 	private subscribe() {
 		try {
 			this.sid = natsClient.subscribe(
-				this.parsedSubject.subject,
+				this.getParsedSubject().subject,
 				this.natsSubscribeOptions || {},
 				(jsonMsg: any, replyTo: string, actualSubject: string) =>
 					this.handleMessage(jsonMsg, replyTo, actualSubject)
 			);
 		} catch (err) {
-			const errorMessage = `bus.subscribe subject must be string but got ${typeof this.parsedSubject
-				.subject} with value ${this.parsedSubject.subject}`;
+			const errorMessage = `bus.subscribe subject must be string but got ${typeof this.getParsedSubject()
+				.subject} with value ${this.getParsedSubject().subject}`;
 			const missingSubjectError = new Error(errorMessage);
 			console.error(missingSubjectError);
 			throw missingSubjectError;
@@ -224,8 +224,13 @@ export class Subscribe {
 	 * @param {String} replyTo
 	 * @param {String} actualSubject
 	 */
-	private async handleMessage(jsonMsg: any, replyTo: string, actualSubject: string): Promise<any> {
+	private async handleMessage(jsonMsg: FrusterRequest, replyTo: string, actualSubject: string): Promise<any> {
 		const startTime = Date.now();
+
+		if (jsonMsg.chunks) {
+			// Request is chunked, make sure to get those before proceeding
+			jsonMsg.data = await this.getDataChunks(jsonMsg, replyTo);
+		}
 
 		if (this.childSubscribes) {
 			const childSub = this.getMatchingChildSubscribe(actualSubject);
@@ -239,6 +244,7 @@ export class Subscribe {
 			try {
 				jsonMsg.data = await this.decompress(jsonMsg);
 			} catch (err) {
+				console.log("Failed decompressing", err);
 				this.handleError(err, jsonMsg, replyTo);
 				return;
 			}
@@ -315,6 +321,44 @@ export class Subscribe {
 		return (this.childSubscribes || []).find((sub) => sub.options.subject === incomingSubject);
 	}
 
+	private async getDataChunks(chunkedRequest: FrusterRequest, replyTo: string) {
+		if (!chunkedRequest.chunks) {
+			console.warn("Cannot get data chunks as request is not chunked");
+			return;
+		}
+
+		let chunks: string[] = new Array<string>(chunkedRequest.chunks).fill("");
+
+		const dataSubject = `data.${chunkedRequest.transactionId}.${this.getParsedSubject().subject}`;
+
+		// Publish to requester that remaining chunks can be published to dataSubject
+		natsClient.publish(replyTo, { dataSubject, reqId: chunkedRequest.reqId, chunks: chunkedRequest.chunks });
+
+		// Create a temporary subscribe to get all data chunks
+		return new Promise<string>((resolve, reject) => {
+			let timeout = setTimeout(() => {
+				natsClient.unsubscribe(dataSubjectSid);
+				reject("TIMEOUT");
+			}, conf.chunkTimeout);
+
+			const dataSubjectSid = natsClient.subscribe(
+				dataSubject,
+				(jsonMsg: { reqId: string; chunk: number; data: string }, replyTo: string) => {
+					if (jsonMsg.chunk > chunkedRequest.chunks!) {
+						throw new Error(`Invalid chunk ${jsonMsg.chunk}, expected ${chunkedRequest.chunks} chunks`);
+					}
+					chunks[jsonMsg.chunk] = jsonMsg.data;
+
+					if (chunks.every((c) => !!c)) {
+						clearTimeout(timeout);
+						natsClient.unsubscribe(dataSubjectSid);
+						resolve(chunks.join(""));
+					}
+				}
+			);
+		});
+	}
+
 	_notAuthorizedResponse() {
 		const errorResp = errors.get("MUST_BE_LOGGED_IN");
 		errorResp.thrower = conf.serviceName;
@@ -350,7 +394,7 @@ export class Subscribe {
 	}
 
 	private validateRequest(req: FrusterRequest, replyTo: string) {
-		if (!req.reqId) console.warn(`Message to subject "${this.parsedSubject.subject}" is missing reqId`);
+		if (!req.reqId) console.warn(`Message to subject "${this.parsedSubject?.subject}" is missing reqId`);
 
 		if (this.options.requestSchema && this.options.validateRequest) {
 			try {
@@ -466,12 +510,12 @@ export class Subscribe {
 	 * as "catch all" and then dispatches to any internal route in case of subject match.
 	 */
 	private configureInternalRouting() {
-		const thisSubject = this.parsedSubject.subject;
+		const thisSubject = this.parsedSubject!.subject;
 
 		const overlaps = subscribeCache.subscribes.filter((sub) => {
 			const oSubject = sub.parentSubscribe
-				? sub.parentSubscribe.parsedSubject.subject
-				: sub.parsedSubject.subject;
+				? sub.parentSubscribe.parsedSubject!.subject
+				: sub.parsedSubject!.subject;
 			return utils.matchSubject(thisSubject, oSubject) || utils.matchSubject(oSubject, thisSubject);
 		});
 
@@ -483,14 +527,21 @@ export class Subscribe {
 				if (!prev) {
 					return curr;
 				}
-				const prevWildcards = (prev.parsedSubject.subject.match(WILDCARD_REGEX) || []).length;
-				const currWildcards = (curr.parsedSubject.subject.match(WILDCARD_REGEX) || []).length;
+				const prevWildcards = (prev.parsedSubject!.subject.match(WILDCARD_REGEX) || []).length;
+				const currWildcards = (curr.parsedSubject!.subject.match(WILDCARD_REGEX) || []).length;
 				return prevWildcards > currWildcards ? prev : curr;
 			});
 
 			// Activate internal routing on catch-all by adding child subscribes to it
 			catchAllSub.setChildSubscribes(allSubs.filter((sub) => sub !== catchAllSub));
 		}
+	}
+
+	private getParsedSubject() {
+		if (!this.parsedSubject) {
+			throw new Error("Subscribe subject has not been parsed (should not happen");
+		}
+		return this.parsedSubject;
 	}
 }
 
@@ -596,15 +647,11 @@ function hasPermissionForCall(inputPermissions: undefined | string[] | string[][
 
 /**
  * Checks if user is authorized for call
- *
- * @param {any} requiredPermissions
- * @param {Boolean} mustBeLoggedIn
- * @param {Array<String>} userScopes
  */
 function isAuthorizedForCall(
 	requiredPermissions: undefined | string[] | string[][],
 	mustBeLoggedIn: boolean | undefined,
-	userScopes = []
+	userScopes: string[] = []
 ) {
 	const permissionSets =
 		requiredPermissions && requiredPermissions.length > 0

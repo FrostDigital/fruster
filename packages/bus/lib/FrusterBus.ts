@@ -227,8 +227,8 @@ export default FrusterBus;
 class TestBus {
 	constructor(private bus: FrusterBus) {}
 
-	subscribe(options: SubscribeOptions | string, cb?: HandleFn) {
-		return this.bus.subscribe(options, cb);
+	subscribe<ReqData = any>(options: SubscribeOptions | string, cb?: HandleFn) {
+		return this.bus.subscribe<ReqData>(options, cb);
 	}
 
 	request<ReqData = any, ResData = any>(options: TestRequestOptions<ReqData>): Promise<FrusterResponse<ResData>> {

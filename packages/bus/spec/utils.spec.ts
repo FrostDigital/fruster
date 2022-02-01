@@ -52,6 +52,19 @@ describe("Utils", () => {
 		expect(decompressedJson).toEqual(data);
 	});
 
+	it("should calculate chunks", () => {
+		const chunks = utils.calcChunks(
+			{
+				data: "012345678",
+			},
+			2
+		);
+
+		expect(chunks.length).toBe(5);
+		expect(chunks[0]).toBe("01");
+		expect(chunks[4]).toBe("8");
+	});
+
 	describe("NATS subject match", () => {
 		it("should match >", () => {
 			expect(utils.matchSubject("foo.bar", ">")).toBeTruthy();

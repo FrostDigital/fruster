@@ -1,7 +1,7 @@
 import uuid from "uuid";
 import constants from "./constants";
 
-export default {
+const conf = {
 	// Name of *this* service
 	serviceName: getServiceName(),
 
@@ -16,6 +16,14 @@ export default {
 
 	// Treshold for when fruster-bus will compress (gzip) data
 	compressTreshold: parseInt(process.env.COMPRESS_TRESHOLD || 1024 * 900 + ""),
+
+	// Chunks size, if message needs to be chunked each message data will be
+	// max this size
+	chunkSize: parseInt(process.env.CHUNK_SIZE || 1024 * 900 + ""),
+
+	// Timeout in ms for when chunks should have been delivered. If not all chunks
+	// has been delivered within this time frame the delivery is considered to have failed.
+	chunkTimeout: parseInt(process.env.CHUNK_TIMEOUT_MS || 1000 * 5 + ""),
 
 	// How fruster-bus will handle compression of data
 	// `manual` - compression will only be done if `dataEncoding` is set to a supported value (currently only `gzip` is supported)
@@ -32,3 +40,12 @@ export default {
 function getServiceName() {
 	return process.env.SERVICE_NAME || process.env.DEIS_APP || "n/a";
 }
+
+if (conf.compressTreshold > conf.chunkSize) {
+	// Chunking should only be used after data has been compressed
+	throw new Error(
+		`COMPRESS_TRESHOLD must be less than or equal CHUNK_TRESHOLD, current values are ${conf.compressTreshold} and ${conf.chunkTreshold}`
+	);
+}
+
+export default conf;

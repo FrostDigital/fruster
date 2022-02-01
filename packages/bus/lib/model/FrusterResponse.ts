@@ -52,4 +52,14 @@ export interface FrusterResponse<T = any> {
 	 * Service that threw the error, if any.
 	 */
 	thrower?: string;
+
+	/**
+	 * Number of data chunks if large response that requires chunking
+	 */
+	chunks?: number;
+
+	/**
+	 * Optional data subject used to send subsequent chunks to.
+	 */
+	dataSubject?: string;
 }

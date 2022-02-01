@@ -1,4 +1,5 @@
 import _ from "lodash";
+import { FrusterRequest } from "../..";
 import conf from "../../conf";
 import constants from "../../constants";
 const zlib = require("zlib");
@@ -7,6 +8,12 @@ const ESCAPED_DOTS_STRING = "{dot}";
 const BASE_64 = "base64";
 
 const SILLY_LOG_LEVEL = "silly";
+
+export interface ParsedSubject {
+	subject: string;
+	isHTTP: boolean;
+	httpMethod?: string;
+}
 
 const utils = {
 	toString: (msg: any) => {
@@ -39,7 +46,7 @@ const utils = {
 	 *
 	 * @param {String} subject
 	 */
-	parseSubject: (subject: string) => {
+	parseSubject: (subject: string): ParsedSubject => {
 		const subjectSplit = subject.split(".");
 		const isHTTP = subject.indexOf("http.") == 0;
 
@@ -58,6 +65,7 @@ const utils = {
 
 		return {
 			subject: outSubject,
+			// dataSubject: `data.${outSubject}`,
 			isHTTP: isHTTP,
 			httpMethod: isHTTP ? subjectSplit[1].toUpperCase() : undefined,
 		};
@@ -113,7 +121,7 @@ const utils = {
 	 * @param {Object} msg (req or response)
 	 * @returns {Promise<Object>} message with compressed data
 	 */
-	compress: (msg: any) => {
+	compress: (msg: { data: any; dataEncoding?: FrusterRequest["dataEncoding"] }) => {
 		return new Promise<any & { data: string; dataEncoding: string }>((resolve, reject) => {
 			zlib.deflate(JSON.stringify(msg.data), (err: any, deflatedData: any) => {
 				if (err) {
@@ -121,7 +129,7 @@ const utils = {
 				}
 
 				msg.data = deflatedData.toString(BASE_64);
-				msg.dataEncoding = constants.CONTENT_ENCODING_GZIP;
+				msg.dataEncoding = "gzip";
 
 				resolve(msg);
 			});
@@ -136,7 +144,7 @@ const utils = {
 	 */
 	decompress: (compressedData: string) => {
 		return new Promise((resolve, reject) => {
-			const buffer = new Buffer(compressedData, BASE_64);
+			const buffer = Buffer.from(compressedData, BASE_64);
 
 			zlib.inflate(buffer, (err: any, res: any) => {
 				if (err) {
@@ -163,8 +171,22 @@ const utils = {
 		);
 	},
 
-	shouldChunkMessage: (msg: any) => {
-		return utils.toString(msg.data).length > conf.compressTreshold;
+	calcChunks: (msg: { data: string }, chunkSize = conf.chunkSize) => {
+		const length = msg.data.length;
+
+		if (length <= chunkSize) {
+			return [];
+		}
+
+		const numChunks = Math.ceil(length / chunkSize);
+
+		let chunks: string[] = [];
+
+		for (let i = 0; i < numChunks; i++) {
+			chunks[i] = msg.data.substring(i * chunkSize, Math.min(i * chunkSize + chunkSize, length));
+		}
+
+		return chunks;
 	},
 
 	/**
