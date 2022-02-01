@@ -237,7 +237,7 @@ class TestBus {
 			message: {
 				...options.message,
 				query: options.message.query || {},
-				params: options.message.query || {},
+				params: options.message.params || {},
 				headers: options.message.headers || {},
 				user: (options.message.user as FrusterRequest["user"]) || undefined,
 				reqId: options.message.reqId || uuid.v4(),
