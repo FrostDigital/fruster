@@ -9,24 +9,66 @@ export interface FrusterResponse<T = any> {
 	/**
 	 * Request id
 	 */
-	reqId: string;
+	reqId?: string;
 
 	/**
 	 * (http) status code of response
 	 */
-	status: number;
+	status?: number;
 
 	/**
 	 * Transaction id
 	 */
-	transactionId: Readonly<string>;
+	transactionId?: string;
 
-	data: T;
+	data?: T;
 
 	/**
 	 * Error data, set if response is an error
 	 */
 	error?: FrusterError;
+
+	/**
+	 * HTTP headers
+	 */
+	headers?: { [x: string]: string };
+
+	/**
+	 * Optional encoding
+	 */
+	dataEncoding?: string;
+
+	/**
+	 * Service that threw the error, if any.
+	 */
+	thrower?: string;
+
+	/**
+	 * Number of data chunks if large response that requires chunking
+	 */
+	chunks?: number;
+
+	/**
+	 * Chunk index, if response is a "chunk".
+	 */
+	chunk?: number;
+
+	/**
+	 * Optional data subject used to send subsequent chunks to.
+	 */
+	dataSubject?: string;
+
+	/**
+	 * Milliseconds it took to process the request and return response
+	 */
+	ms?: number;
+}
+
+export interface ImmutableFrusterResponse<T = any> extends FrusterResponse<T> {
+	/**
+	 * HTTP headers
+	 */
+	headers?: Readonly<{ [x: string]: string }>;
 
 	/**
 	 * Information where response came from
@@ -37,19 +79,7 @@ export interface FrusterResponse<T = any> {
 	}>;
 
 	/**
-	 * HTTP headers
+	 * Milliseconds it took to process the request and return response
 	 */
-	headers: { [x: string]: string }; // TODO: Optional?
-
-	/**
-	 * Optional encoding
-	 */
-	dataEncoding?: string;
-
 	ms?: Readonly<number>;
-
-	/**
-	 * Service that threw the error, if any.
-	 */
-	thrower?: string;
 }

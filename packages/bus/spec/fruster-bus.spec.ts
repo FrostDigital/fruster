@@ -84,6 +84,7 @@ describe("Fruster bus", () => {
 					return {
 						status: 400,
 						error: {
+							code: "CODE",
 							title,
 							detail,
 						},
@@ -225,10 +226,12 @@ describe("Fruster bus", () => {
 		});
 
 		it("should reject if error is resolved from promise", (done) => {
-			bus.subscribe(subject, (req, replyTo) => {
+			bus.subscribe(subject, () => {
 				return Promise.resolve({
 					error: {
 						id: "abc123",
+						code: "CODE",
+						title: "TITLE",
 					},
 				});
 			});
@@ -265,7 +268,7 @@ describe("Fruster bus", () => {
 				.catch(done.fail);
 		});
 
-		it("should send and recieve multiple requests", (done) => {
+		it("should send and receive multiple requests", (done) => {
 			bus.subscribe(subject, (req, replyTo) => {
 				bus.publish({ subject: replyTo, message: {} });
 			});
@@ -405,7 +408,7 @@ describe("Fruster bus", () => {
 	describe("Permissions", () => {
 		it("should allow anything with no permissions defined", async (done) => {
 			bus.subscribe(subject, (req) => {
-				expect(req.user.scopes).toEqual(["user.get"]);
+				expect(req.user?.scopes).toEqual(["user.get"]);
 				done();
 			});
 
@@ -684,7 +687,7 @@ describe("Fruster bus", () => {
 			expect(resp.data).toEqual(data);
 		});
 
-		it("should NOT compress data in subscribe if message is less than treshold", (done) => {
+		it("should NOT compress data in subscribe if message is less than threshold", (done) => {
 			const data = {
 				foo: "bar",
 			};
@@ -750,7 +753,7 @@ describe("Fruster bus", () => {
 			}
 		});
 
-		it("should compress data in request if larger than treshold value and compression strategy is auto", async (done) => {
+		it("should compress data in request if larger than threshold value and compression strategy is auto", async (done) => {
 			const data = require("./support/1mb");
 
 			bus.subscribe(subject, (req) => {

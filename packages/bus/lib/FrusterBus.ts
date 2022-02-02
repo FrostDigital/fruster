@@ -5,7 +5,7 @@ import constants from "../constants";
 import MetadataHandler from "./MetadataHandler";
 import { ConnectedClient, ConnectOptions } from "./model/ConnectedClient";
 import { FrusterRequest } from "./model/FrusterRequest";
-import { FrusterResponse } from "./model/FrusterResponse";
+import { FrusterResponse, ImmutableFrusterResponse } from "./model/FrusterResponse";
 import { publish as publishBuilder, PublishOptions } from "./publish";
 import { request as requestBuilder, RequestManyOptions, RequestOptions, TestRequestOptions } from "./request";
 import * as schemas from "./schemas";
@@ -73,7 +73,9 @@ class FrusterBus {
 		throw new Error("There are no connected client(s)");
 	}
 
-	request<ReqData = any, ResData = any>(options: RequestOptions<ReqData>): Promise<FrusterResponse<ResData>> {
+	request<ReqData = any, ResData = any>(
+		options: RequestOptions<ReqData>
+	): Promise<ImmutableFrusterResponse<ResData>> {
 		// Note: Method is set when client is connected
 		throw new Error("There are no connected client(s)");
 	}
@@ -227,14 +229,22 @@ export default FrusterBus;
 class TestBus {
 	constructor(private bus: FrusterBus) {}
 
-	subscribe(options: SubscribeOptions | string, cb?: HandleFn) {
-		return this.bus.subscribe(options, cb);
+	subscribe<ReqData = any>(options: SubscribeOptions | string, cb?: HandleFn) {
+		return this.bus.subscribe<ReqData>(options, cb);
 	}
 
 	request<ReqData = any, ResData = any>(options: TestRequestOptions<ReqData>): Promise<FrusterResponse<ResData>> {
 		return this.bus.request({
 			...options,
-			message: { ...options.message, reqId: options.message.reqId || uuid.v4() },
+			message: {
+				...options.message,
+				query: options.message.query || {},
+				params: options.message.params || {},
+				headers: options.message.headers || {},
+				user: (options.message.user as FrusterRequest["user"]) || undefined,
+				reqId: options.message.reqId || uuid.v4(),
+				transactionId: uuid.v4(),
+			},
 		});
 	}
 

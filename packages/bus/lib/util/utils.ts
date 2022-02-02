@@ -1,4 +1,6 @@
 import _ from "lodash";
+import { FrusterResponse } from "../model/FrusterResponse";
+import { FrusterRequest, CreateFrusterRequest } from "../model/FrusterRequest";
 import conf from "../../conf";
 import constants from "../../constants";
 const zlib = require("zlib");
@@ -7,6 +9,12 @@ const ESCAPED_DOTS_STRING = "{dot}";
 const BASE_64 = "base64";
 
 const SILLY_LOG_LEVEL = "silly";
+
+export interface ParsedSubject {
+	subject: string;
+	isHTTP: boolean;
+	httpMethod?: string;
+}
 
 const utils = {
 	toString: (msg: any) => {
@@ -17,8 +25,8 @@ const utils = {
 		return JSON.parse(JSON.stringify(msg));
 	},
 
-	isError: (msg: object & { status: number; error?: any }) => {
-		return msg.status >= 400 || !_.isEmpty(msg.error);
+	isError: (msg: object & { status?: number; error?: any }) => {
+		return (msg.status && msg.status >= 400) || !_.isEmpty(msg.error);
 	},
 
 	logIncomingMessage: (subject: string, msg: any) => {
@@ -39,7 +47,7 @@ const utils = {
 	 *
 	 * @param {String} subject
 	 */
-	parseSubject: (subject: string) => {
+	parseSubject: (subject: string): ParsedSubject => {
 		const subjectSplit = subject.split(".");
 		const isHTTP = subject.indexOf("http.") == 0;
 
@@ -113,7 +121,7 @@ const utils = {
 	 * @param {Object} msg (req or response)
 	 * @returns {Promise<Object>} message with compressed data
 	 */
-	compress: (msg: any) => {
+	compress: (msg: CreateFrusterRequest | FrusterResponse) => {
 		return new Promise<any & { data: string; dataEncoding: string }>((resolve, reject) => {
 			zlib.deflate(JSON.stringify(msg.data), (err: any, deflatedData: any) => {
 				if (err) {
@@ -121,7 +129,7 @@ const utils = {
 				}
 
 				msg.data = deflatedData.toString(BASE_64);
-				msg.dataEncoding = constants.CONTENT_ENCODING_GZIP;
+				msg.dataEncoding = "gzip";
 
 				resolve(msg);
 			});
@@ -136,7 +144,7 @@ const utils = {
 	 */
 	decompress: (compressedData: string) => {
 		return new Promise((resolve, reject) => {
-			const buffer = new Buffer(compressedData, BASE_64);
+			const buffer = Buffer.from(compressedData, BASE_64);
 
 			zlib.inflate(buffer, (err: any, res: any) => {
 				if (err) {
@@ -154,17 +162,31 @@ const utils = {
 	 * @param {Object} msg
 	 * @returns {Boolean} true is message data should be compressed
 	 */
-	shouldCompressMessage: (msg: any) => {
+	shouldCompressMessage: (msg: CreateFrusterRequest | FrusterResponse) => {
 		return (
 			msg.dataEncoding === constants.CONTENT_ENCODING_GZIP ||
 			(conf.compressionStrategy === constants.COMPRESSION_STRATEGY_AUTO &&
 				msg.data &&
-				utils.toString(msg.data).length > conf.compressTreshold)
+				utils.toString(msg.data).length > conf.compressThreshold)
 		);
 	},
 
-	shouldChunkMessage: (msg: any) => {
-		return utils.toString(msg.data).length > conf.compressTreshold;
+	calcChunks: (data: string, chunkSize = conf.chunkSize) => {
+		const length = data.length;
+
+		if (length <= chunkSize) {
+			return [];
+		}
+
+		const numChunks = Math.ceil(length / chunkSize);
+
+		let chunks: string[] = [];
+
+		for (let i = 0; i < numChunks; i++) {
+			chunks[i] = data.substring(i * chunkSize, Math.min(i * chunkSize + chunkSize, length));
+		}
+
+		return chunks;
 	},
 
 	/**
@@ -200,3 +222,36 @@ const utils = {
 };
 
 export default utils;
+
+/**
+ * Constructs a reply-to subject that response from requesting service will reply to.
+ *
+ * @param subject
+ * @param transactionId
+ * @returns
+ */
+export function createResponseReplyToSubject(subject: string, transactionId: string) {
+	return `res.${transactionId}.${subject}`;
+}
+
+/**
+ * Constructs a reply-to subject for data messages in case chunking is used.
+ *
+ * @param subject
+ * @param transactionId
+ * @returns
+ */
+export function createResponseDataReplyToSubject(subject: string, transactionId: string) {
+	return `_data_.res.${transactionId}.${subject}`;
+}
+
+/**
+ * Constructs a reply-to subject for data messages in case chunking is used.
+ *
+ * @param subject
+ * @param transactionId
+ * @returns
+ */
+export function createRequestDataReplyToSubject(subject: string, transactionId: string) {
+	return `_data_.${transactionId}.${subject}`;
+}
