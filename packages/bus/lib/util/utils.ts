@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { FrusterResponse } from "../model/FrusterResponse";
-import { FrusterRequest, FrusterRequestWithOptionalData } from "../model/FrusterRequest";
+import { FrusterRequest, CreateFrusterRequest } from "../model/FrusterRequest";
 import conf from "../../conf";
 import constants from "../../constants";
 const zlib = require("zlib");
@@ -25,8 +25,8 @@ const utils = {
 		return JSON.parse(JSON.stringify(msg));
 	},
 
-	isError: (msg: object & { status: number; error?: any }) => {
-		return msg.status >= 400 || !_.isEmpty(msg.error);
+	isError: (msg: object & { status?: number; error?: any }) => {
+		return (msg.status && msg.status >= 400) || !_.isEmpty(msg.error);
 	},
 
 	logIncomingMessage: (subject: string, msg: any) => {
@@ -66,7 +66,6 @@ const utils = {
 
 		return {
 			subject: outSubject,
-			// dataSubject: `data.${outSubject}`,
 			isHTTP: isHTTP,
 			httpMethod: isHTTP ? subjectSplit[1].toUpperCase() : undefined,
 		};
@@ -122,7 +121,7 @@ const utils = {
 	 * @param {Object} msg (req or response)
 	 * @returns {Promise<Object>} message with compressed data
 	 */
-	compress: (msg: FrusterRequestWithOptionalData | FrusterResponse) => {
+	compress: (msg: CreateFrusterRequest | FrusterResponse) => {
 		return new Promise<any & { data: string; dataEncoding: string }>((resolve, reject) => {
 			zlib.deflate(JSON.stringify(msg.data), (err: any, deflatedData: any) => {
 				if (err) {
@@ -163,7 +162,7 @@ const utils = {
 	 * @param {Object} msg
 	 * @returns {Boolean} true is message data should be compressed
 	 */
-	shouldCompressMessage: (msg: FrusterRequestWithOptionalData | FrusterResponse) => {
+	shouldCompressMessage: (msg: CreateFrusterRequest | FrusterResponse) => {
 		return (
 			msg.dataEncoding === constants.CONTENT_ENCODING_GZIP ||
 			(conf.compressionStrategy === constants.COMPRESSION_STRATEGY_AUTO &&
@@ -223,3 +222,36 @@ const utils = {
 };
 
 export default utils;
+
+/**
+ * Constructs a reply-to subject that response from requesting service will reply to.
+ *
+ * @param subject
+ * @param transactionId
+ * @returns
+ */
+export function createResponseReplyToSubject(subject: string, transactionId: string) {
+	return `res.${transactionId}.${subject}`;
+}
+
+/**
+ * Constructs a reply-to subject for data messages in case chunking is used.
+ *
+ * @param subject
+ * @param transactionId
+ * @returns
+ */
+export function createResponseDataReplyToSubject(subject: string, transactionId: string) {
+	return `_data_.res.${transactionId}.${subject}`;
+}
+
+/**
+ * Constructs a reply-to subject for data messages in case chunking is used.
+ *
+ * @param subject
+ * @param transactionId
+ * @returns
+ */
+export function createRequestDataReplyToSubject(subject: string, transactionId: string) {
+	return `_data_.${transactionId}.${subject}`;
+}

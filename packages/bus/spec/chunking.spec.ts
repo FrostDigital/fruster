@@ -22,8 +22,35 @@ describe("Chunking", () => {
 		bus.closeAll();
 	});
 
-	it("should chunk large messages", async () => {
+	it("should chunk large request", async () => {
 		const subject = "chunky-salsa";
+
+		const largeMessage = foo;
+
+		const largeMessageLength = JSON.stringify(largeMessage).length;
+
+		testBus.subscribe<string>({
+			subject,
+			handle: (req) => {
+				expect(JSON.stringify(req.data).length).toBe(largeMessageLength);
+				return {
+					data: "ok",
+				};
+			},
+		});
+
+		const res = await testBus.request<string[], string>({
+			subject,
+			message: {
+				data: largeMessage,
+			},
+		});
+
+		expect(res.data).toBe("ok");
+	});
+
+	it("should chunk large response", async () => {
+		const subject = "chunky-salsiccia";
 
 		const largeMessage = foo;
 
@@ -32,17 +59,17 @@ describe("Chunking", () => {
 		testBus.subscribe<string[]>({
 			subject,
 			handle: (req) => {
-				expect(JSON.stringify(req.data).length).toBe(largeMessageLength);
+				expect(req.data).toBe("ok");
 				return {
 					data: largeMessage,
 				};
 			},
 		});
 
-		const res = await testBus.request<string[], string[]>({
+		const res = await testBus.request<string, string[]>({
 			subject,
 			message: {
-				data: largeMessage,
+				data: "ok",
 			},
 		});
 

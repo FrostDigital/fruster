@@ -18,7 +18,7 @@ export interface FrusterRequest<T = any> {
 	 * Identifies a request - response pair. Is generated and set when
 	 * request is created.
 	 */
-	transactionId?: string;
+	transactionId: string;
 
 	/**
 	 * Request body
@@ -61,14 +61,21 @@ export interface FrusterRequest<T = any> {
 	dataEncoding?: string;
 
 	/**
+	 * Subject that requester will subscribe on if responder needs to
+	 * chunk response data.
+	 */
+	dataSubject?: string;
+
+	/**
 	 * Number of data chunks if data payload is large and requires chunking, meaning
 	 * that the request will be slit up into smaller pieces.
 	 */
 	chunks?: number;
 }
 
-export interface FrusterRequestWithOptionalData<T = any> extends Omit<FrusterRequest<T>, "data"> {
+export interface CreateFrusterRequest<T = any> extends Omit<FrusterRequest<T>, "data" | "transactionId"> {
 	data?: T;
+	transactionId?: string;
 }
 
 export interface ImmutableFrusterRequest<T = any> extends FrusterRequest<T> {

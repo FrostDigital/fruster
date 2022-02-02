@@ -5,11 +5,12 @@ import { FrusterRequest, ImmutableFrusterRequest } from "./model/FrusterRequest"
 import { FrusterResponse } from "./model/FrusterResponse";
 import * as schemas from "./schemas";
 import subscribeCache from "./subscribe-cache";
-import utils, { ParsedSubject } from "./util/utils";
+import utils, { createRequestDataReplyToSubject, ParsedSubject } from "./util/utils";
 const errors = require("./util/errors");
 import conf from "../conf";
 import constants from "../constants";
 import { publish as publishBuilder, PublishOptions } from "./publish";
+import { FrusterDataMessage } from "./model/FrusterDataMessage";
 
 const WILDCARD_REGEX = /\*/g;
 
@@ -229,7 +230,7 @@ export class Subscribe {
 
 		if (jsonMsg.chunks) {
 			// Request is chunked, make sure to get those before proceeding
-			jsonMsg.data = await this.getDataChunks(jsonMsg, replyTo);
+			jsonMsg.data = await this.getRequestDataChunks(jsonMsg, replyTo);
 		}
 
 		if (this.childSubscribes) {
@@ -274,7 +275,7 @@ export class Subscribe {
 				else jsonMsg.params = params;
 			}
 
-			let response;
+			let response: ReturnType<HandleFn>;
 
 			try {
 				jsonMsg.query = jsonMsg.query || {};
@@ -300,7 +301,7 @@ export class Subscribe {
 							resolvedResponse.transactionId = jsonMsg.transactionId;
 							resolvedResponse.ms = Date.now() - startTime;
 
-							return this.publishResponse(resolvedResponse, replyTo);
+							return this.publishResponse(resolvedResponse, replyTo, jsonMsg.dataSubject);
 						})
 						.catch((err: any) => this.handleError(err, jsonMsg, replyTo));
 				} else {
@@ -309,7 +310,7 @@ export class Subscribe {
 					response.reqId = jsonMsg.reqId;
 					response.ms = Date.now() - startTime;
 
-					await this.publishResponse(response, replyTo);
+					await this.publishResponse(response as FrusterResponse, replyTo, jsonMsg.dataSubject);
 				}
 			}
 		} else {
@@ -321,7 +322,10 @@ export class Subscribe {
 		return (this.childSubscribes || []).find((sub) => sub.options.subject === incomingSubject);
 	}
 
-	private async getDataChunks(chunkedRequest: FrusterRequest, replyTo: string) {
+	/**
+	 * Subscribes on data subject to receive data chunks for request.
+	 */
+	private async getRequestDataChunks(chunkedRequest: FrusterRequest, replyTo: string) {
 		if (!chunkedRequest.chunks) {
 			console.warn("Cannot get data chunks as request is not chunked");
 			return;
@@ -329,7 +333,10 @@ export class Subscribe {
 
 		let chunks: string[] = new Array<string>(chunkedRequest.chunks).fill("");
 
-		const dataSubject = `data.${chunkedRequest.transactionId}.${this.getParsedSubject().subject}`;
+		const dataSubject = createRequestDataReplyToSubject(
+			this.getParsedSubject().subject,
+			chunkedRequest.transactionId
+		);
 
 		// Publish to requester that remaining chunks can be published to dataSubject
 		natsClient.publish(replyTo, { dataSubject, reqId: chunkedRequest.reqId, chunks: chunkedRequest.chunks });
@@ -357,6 +364,21 @@ export class Subscribe {
 				}
 			);
 		});
+	}
+
+	private async sendDataChunks(chunks: string[], reqId: string, transactionId: string, dataSubject: string) {
+		let i = 0;
+		for (const chunk of chunks) {
+			const msg: FrusterDataMessage = {
+				reqId,
+				transactionId,
+				data: chunk,
+				chunk: i,
+				chunks: chunks.length,
+			};
+			natsClient.publish(dataSubject, msg);
+			i++;
+		}
 	}
 
 	_notAuthorizedResponse() {
@@ -440,10 +462,22 @@ export class Subscribe {
 	 * @param {Object} response
 	 * @param {String} replyTo
 	 */
-	private async publishResponse(response: FrusterResponse, replyTo: string) {
+	private async publishResponse(response: FrusterResponse, replyTo: string, dataSubject?: string) {
 		const responseIsValid = this.validateResponse(response, replyTo);
 
-		if (utils.shouldCompressMessage(response)) response = await utils.compress(response);
+		if (utils.shouldCompressMessage(response)) {
+			response = await utils.compress(response);
+
+			let chunks = utils.calcChunks(response.data);
+
+			if (chunks.length && dataSubject) {
+				// Set first chunk as data in request and then send next ones
+				// when requesting service returns `dataSubject` in the reply to handler
+				response.chunks = chunks.length;
+				response.data = {};
+				this.sendDataChunks(chunks, response.reqId!, response.transactionId!, dataSubject);
+			}
+		}
 
 		if (responseIsValid) publish({ subject: replyTo, message: response });
 	}
@@ -477,6 +511,7 @@ export class Subscribe {
 	 */
 	private async decompress(req: FrusterRequest) {
 		if (req.dataEncoding === constants.CONTENT_ENCODING_GZIP) {
+			console.log("Decompressing");
 			return utils.decompress(req.data);
 		} else {
 			throw errors.get("INVALID_DATA_ENCODING", req.dataEncoding);

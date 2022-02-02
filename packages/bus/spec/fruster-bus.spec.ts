@@ -622,7 +622,6 @@ describe("Fruster bus", () => {
 
 		it("should be possible to send params w/ request", async () => {
 			bus.subscribe("ws.post.org", (req) => {
-				console.log(111, req);
 				expect(req.params.hello).toBe("1337");
 				return {
 					status: 200,

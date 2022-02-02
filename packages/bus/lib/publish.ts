@@ -24,10 +24,6 @@ export const publish = (client: Client) => {
 function doPublish(options: PublishOptions) {
 	utils.logOutgoingMessage(options.subject, options.message);
 
-	if (!options.message) {
-		console.log("\n\n1111111", options);
-	}
-
 	utils.setFromMetadata(options.message);
 
 	return natsClient.publish(options.subject, options.message);

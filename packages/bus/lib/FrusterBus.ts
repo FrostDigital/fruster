@@ -5,7 +5,7 @@ import constants from "../constants";
 import MetadataHandler from "./MetadataHandler";
 import { ConnectedClient, ConnectOptions } from "./model/ConnectedClient";
 import { FrusterRequest } from "./model/FrusterRequest";
-import { FrusterResponse } from "./model/FrusterResponse";
+import { FrusterResponse, ImmutableFrusterResponse } from "./model/FrusterResponse";
 import { publish as publishBuilder, PublishOptions } from "./publish";
 import { request as requestBuilder, RequestManyOptions, RequestOptions, TestRequestOptions } from "./request";
 import * as schemas from "./schemas";
@@ -73,7 +73,9 @@ class FrusterBus {
 		throw new Error("There are no connected client(s)");
 	}
 
-	request<ReqData = any, ResData = any>(options: RequestOptions<ReqData>): Promise<FrusterResponse<ResData>> {
+	request<ReqData = any, ResData = any>(
+		options: RequestOptions<ReqData>
+	): Promise<ImmutableFrusterResponse<ResData>> {
 		// Note: Method is set when client is connected
 		throw new Error("There are no connected client(s)");
 	}
