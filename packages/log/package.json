@@ -20,13 +20,13 @@
   "dependencies": {
     "moment": "^2.29.1",
     "moment-timezone": "^0.5.33",
-    "uuid": "^3.1.0",
+    "uuid": "^8.3.2",
     "winston": "^2.2.0",
     "winston-papertrail": "^1.0.5"
   },
   "devDependencies": {
-    "@types/jasmine": "^2.8.5",
     "@fruster/bus": "*",
+    "@types/jasmine": "^2.8.5",
     "fruster-test-utils": "^0.6.5",
     "jasmine": "^2.4.1",
     "jasmine-spec-reporter": "^2.7.0"
