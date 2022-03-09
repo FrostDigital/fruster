@@ -1,4 +1,4 @@
-import uuid from "uuid";
+import * as uuid from "uuid";
 import constants from "../constants";
 import bus, { version } from "../index";
 import { startNatsServerAndConnectBus, TestConnection } from "./support/test-utils";
