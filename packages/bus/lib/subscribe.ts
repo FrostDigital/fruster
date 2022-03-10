@@ -1,11 +1,11 @@
 import _ from "lodash";
 import { Client } from "nats";
-import uuid from "uuid";
+import * as uuid from "uuid";
 import { FrusterRequest, ImmutableFrusterRequest } from "./model/FrusterRequest";
 import { FrusterResponse } from "./model/FrusterResponse";
 import * as schemas from "./schemas";
 import subscribeCache from "./subscribe-cache";
-import utils, { createRequestDataReplyToSubject, ParsedSubject } from "./util/utils";
+import utils, { createRequestDataReplyToSubject, debugLog, ParsedSubject } from "./util/utils";
 const errors = require("./util/errors");
 import conf from "../conf";
 import constants from "../constants";
@@ -141,18 +141,20 @@ export class Subscribe {
 
 		this.subscribe();
 
+		debugLog(`Registered subscribe ${this.options.subject}`);
+
 		if (this.options.createQueueGroup) this.configureInternalRouting();
 
 		if (this.options.subject !== constants.METADATA_SUBJECT) subscribeCache.add(this);
 
 		if (this.options.requestSchema && typeof this.options.requestSchema !== "string") {
 			schemas.addSchema({ schema: this.options.requestSchema });
-			this.options.requestSchema = this.options.requestSchema.id;
+			this.options.requestSchema = this.options.requestSchema.$id;
 		}
 
 		if (this.options.responseSchema && typeof this.options.responseSchema !== "string") {
 			schemas.addSchema({ schema: this.options.responseSchema });
-			this.options.responseSchema = this.options.responseSchema.id;
+			this.options.responseSchema = this.options.responseSchema.$id;
 		}
 	}
 
@@ -263,7 +265,7 @@ export class Subscribe {
 			!!jsonMsg.user ? jsonMsg.user.scopes : []
 		);
 
-		if (!isAuthenticated) return publish({ subject: replyTo, message: this._notAuthorizedResponse() });
+		if (!isAuthenticated) return publish({ subject: replyTo, message: this.notAuthorizedResponse() });
 
 		const hasPermission = hasPermissionForCall(this.options.permissions, !!jsonMsg.user ? jsonMsg.user.scopes : []);
 
@@ -314,7 +316,7 @@ export class Subscribe {
 				}
 			}
 		} else {
-			publish({ subject: replyTo, message: this._forbiddenResponse() });
+			publish({ subject: replyTo, message: this.forbiddenResponse() });
 		}
 	}
 
@@ -381,7 +383,7 @@ export class Subscribe {
 		}
 	}
 
-	_notAuthorizedResponse() {
+	private notAuthorizedResponse() {
 		const errorResp = errors.get("MUST_BE_LOGGED_IN");
 		errorResp.thrower = conf.serviceName;
 		return errorResp;
@@ -390,7 +392,7 @@ export class Subscribe {
 	/**
 	 * Creates forbidden response.
 	 */
-	_forbiddenResponse() {
+	private forbiddenResponse() {
 		let permissionsText = "";
 
 		if (
@@ -423,7 +425,7 @@ export class Subscribe {
 				let schemaId = "";
 
 				if (typeof this.options.requestSchema === "string") schemaId = this.options.requestSchema;
-				else schemaId = this.options.requestSchema.id;
+				else schemaId = this.options.requestSchema.$id;
 
 				schemas.validate(schemaId, req.data);
 			} catch (validationError) {
@@ -447,7 +449,7 @@ export class Subscribe {
 				schemaId =
 					typeof this.options.responseSchema === "string"
 						? this.options.responseSchema
-						: this.options.responseSchema.id;
+						: this.options.responseSchema.$id;
 
 				schemas.validate(schemaId, response.data, false);
 			} catch (validationError) {

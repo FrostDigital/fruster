@@ -1,5 +1,5 @@
 import nats from "nats";
-import uuid from "uuid";
+import * as uuid from "uuid";
 import conf from "../conf";
 import constants from "../constants";
 import MetadataHandler from "./MetadataHandler";
@@ -39,7 +39,7 @@ class FrusterBus {
 			if (masterClient) return masterClient;
 		}
 
-		schemas.init(options.schemasDir!, options.schemaResolver);
+		schemas.init(options.schemasDir!);
 
 		subscribeCache.clear();
 
@@ -221,6 +221,22 @@ class FrusterBus {
 				reject(e);
 			});
 		});
+	}
+
+	get status() {
+		// TODO: TBH I am not sure what this is for, do even need this? /JS
+		return {
+			connected:
+				this.connectedClients.length > 0 ? !!this.connectedClients.find((client) => client.isConnected) : false,
+			closed:
+				this.connectedClients.length > 0
+					? this.connectedClients.filter((client) => client.isClosed).length === this.connectedClients.length
+					: false,
+			reconnecting:
+				this.connectedClients.length > 0
+					? !!this.connectedClients.find((client) => client.isReconnecting)
+					: false,
+		};
 	}
 }
 

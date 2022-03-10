@@ -1,7 +1,7 @@
 {
   "name": "demo-app",
   "version": "0.0.0",
-  "description": "Demo app of fruster micro services",
+  "description": "Demo app for fruster micro services",
   "private": true,
   "homepage": "https://github.com/FrostDigital/fruster#readme",
   "license": "MIT",
@@ -13,13 +13,15 @@
     "start": "fruster-runner ./app.ts",
     "start:watch": "ts-node-dev ./app.ts",
     "test": "nyc --reporter=html --check-coverage --lines 90 ts-node ./spec/support/jasmine-runner.ts",
-    "test:watch": "ts-node-dev --respawn --no-notify ./spec/support/jasmine-runner.ts"
+    "test:watch": "ts-node-dev --respawn --no-notify ./spec/support/jasmine-runner.ts",
+    "dev": "nodemon --exec \"fruster-runner ./app.ts\""
   },
   "dependencies": {
     "@fruster/bus": "^1.0.0",
     "@fruster/decorators": "^1.0.0",
     "@fruster/log": "^1.0.0",
     "@fruster/runner": "^0.0.0",
+    "@fruster/health": "^1.0.0",
     "@types/uuid": "^8.3.4",
     "uuid": "^8.3.2"
   },

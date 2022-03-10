@@ -1,6 +1,6 @@
 import bus from "@fruster/bus";
 import log from "@fruster/log";
-// import { start as startHealthCheck } from "fruster-health";
+import { start as startHealthCheck } from "@fruster/health";
 import { start } from "./demo-service";
 import * as config from "./config";
 
@@ -15,7 +15,7 @@ import * as config from "./config";
   try {
     await start(config.bus);
     log.info(`Successfully started demo-app`);
-    // await startHealthCheck(bus);
+    await startHealthCheck(bus);
   } catch (err: any) {
     log.error(`Failed starting demo-app`, err);
     process.exit(1);

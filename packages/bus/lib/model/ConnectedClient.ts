@@ -7,10 +7,6 @@ export interface ConnectedClient extends Client {
 	isReconnecting?: boolean;
 }
 
-// export interface ConnectParams {
-// 	address: string | string[];
-// }
-
 export interface ConnectOptions {
 	/**
 	 * Bus address(es) to connect to
@@ -26,20 +22,4 @@ export interface ConnectOptions {
 	 * Directory where request/response schemas are located.
 	 */
 	schemasDir?: string;
-
-	/**
-	 * Optional schema resolver
-	 */
-	schemaResolver?: SchemaResolver;
-}
-
-interface SchemaResolver {
-	/**
-	 * Optional filter to decide if schema file should be parsed by customer schema resolver, will parse all files if not set
-	 */
-	filter?: () => any; // TODO: Params
-	/**
-	 * Function invoked when schema bus is about to add schema, should return array of parsed schemas
-	 */
-	addSchemas: () => any[];
 }
