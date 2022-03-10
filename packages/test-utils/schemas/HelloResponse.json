@@ -1,0 +1,14 @@
+{
+    "id": "HelloResponse",
+    "description": "Json schema for testing forceResponseValidation: true",
+    "additionalProperties": false,
+    "properties": {
+        "a": {
+            "type": "integer",
+            "minimum": 1
+        },
+        "b": {
+            "type": "string"
+        }
+    }
+}
