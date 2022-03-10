@@ -3,7 +3,7 @@ import { injectable, subscribe } from "@fruster/decorators";
 import { Car } from "../models/Car";
 import * as uuid from "uuid";
 
-interface Request {
+export interface GetCarRequest {
   brand?: string;
 }
 
@@ -12,7 +12,7 @@ class CarHandler {
   @subscribe({
     subject: "demo-service.get-car",
   })
-  handle(req: FrusterRequest<Request>): FrusterResponse<Car> {
+  handle(req: FrusterRequest<GetCarRequest>): FrusterResponse<Car> {
     return {
       status: 200,
       data: {

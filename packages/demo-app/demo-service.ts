@@ -1,8 +1,8 @@
 import bus from "@fruster/bus";
 import CarHandler from "./lib/handlers/CarHandler";
 
-export async function start(busAddress: string) {
-  await bus.connect(busAddress);
+export async function start({ natsUrl }: { natsUrl: string }) {
+  await bus.connect(natsUrl);
 
   registerHandlers();
 }
