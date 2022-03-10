@@ -133,3 +133,26 @@ export interface ImmutableFrusterRequest<T = any> extends FrusterRequest<T> {
 		instanceId: String;
 	}>;
 }
+
+export interface TestFrusterRequest<T = any>
+	extends Omit<CreateFrusterRequest<T>, "reqId" | "user" | "query" | "params" | "headers" | "transactionId"> {
+	reqId?: string;
+	query?: { [x: string]: string };
+	params?: { [x: string]: string };
+	headers?: { [x: string]: string };
+	user?: Partial<FrusterRequest["user"]>;
+}
+
+export interface RequestOptions<T = any> {
+	subject: string;
+	message: CreateFrusterRequest<T>;
+	timeout?: number;
+}
+
+export interface RequestManyOptions extends RequestOptions {
+	maxResponses?: number;
+}
+
+export interface TestRequestOptions<T = any> extends Omit<RequestOptions, "message"> {
+	message: TestFrusterRequest<T>;
+}

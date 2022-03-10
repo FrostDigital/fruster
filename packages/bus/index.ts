@@ -1,9 +1,6 @@
-// import connect from "./lib/connect";
 import conf from "./conf";
 import FrusterBus from "./lib/FrusterBus";
 import pjson from "./package.json";
-
-// export * from "./lib/connect";
 export * from "./lib/model/FrusterRequest";
 export * from "./lib/model/FrusterResponse";
 export type { SubscribeOptions } from "./lib/subscribe";

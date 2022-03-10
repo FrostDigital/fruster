@@ -3,33 +3,10 @@ import * as uuid from "uuid";
 import conf from "../conf";
 import constants from "../constants";
 import { FrusterDataMessage } from "./model/FrusterDataMessage";
-import { CreateFrusterRequest, FrusterRequest } from "./model/FrusterRequest";
+import { RequestManyOptions, RequestOptions } from "./model/FrusterRequest";
 import { FrusterResponse, ImmutableFrusterResponse } from "./model/FrusterResponse";
 import errors from "./util/errors";
 import utils, { createResponseDataReplyToSubject, createResponseReplyToSubject } from "./util/utils";
-
-export interface TestRequestMessage<T = any>
-	extends Omit<CreateFrusterRequest<T>, "reqId" | "user" | "query" | "params" | "headers" | "transactionId"> {
-	reqId?: string;
-	query?: { [x: string]: string };
-	params?: { [x: string]: string };
-	headers?: { [x: string]: string };
-	user?: Partial<FrusterRequest["user"]>;
-}
-
-export interface RequestOptions<T = any> {
-	subject: string;
-	message: CreateFrusterRequest<T>;
-	timeout?: number;
-}
-
-export interface RequestManyOptions extends RequestOptions {
-	maxResponses?: number;
-}
-
-export interface TestRequestOptions<T = any> extends Omit<RequestOptions, "message"> {
-	message: TestRequestMessage<T>;
-}
 
 let natsClient: Client;
 
