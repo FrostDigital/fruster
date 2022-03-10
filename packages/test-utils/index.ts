@@ -2,6 +2,7 @@ import getPort from "get-port";
 import mongo, { Db } from "mongodb";
 import MockService, { MockServiceOpts } from "./MockService";
 const nsc = require("nats-server-control");
+import * as fBus from "@fruster/bus";
 
 interface ServiceWithStart {
 	[x: string]: any;
@@ -10,7 +11,7 @@ interface ServiceWithStart {
 		| ((natsUrl: string, mongoUrl: string) => any);
 }
 
-let bus: any;
+let bus: fBus.FrusterBus;
 
 type BeforeFn = typeof beforeAll | typeof beforeEach;
 type AfterFn = typeof afterAll | typeof afterEach;
@@ -25,7 +26,7 @@ export interface FrusterTestUtilsOptions {
 	/**
 	 * Bus to be started.
 	 */
-	bus?: any;
+	bus?: fBus.FrusterBus;
 	/**
 	 * Function to run before start.
 	 */
@@ -65,12 +66,21 @@ export interface FrusterTestUtilsOptions {
 }
 
 export interface FrusterTestUtilsConnection {
+	db: Db;
+	port: number;
+	server: any;
+	natsUrl: string;
+	natsClient: any;
+	bus: fBus.FrusterBus;
+}
+
+interface FrusterTestUtilsConnectionBuilder {
 	db?: Db;
 	port?: number;
 	server?: any;
 	natsUrl?: string;
 	natsClient?: any;
-	bus?: any;
+	bus?: fBus.FrusterBus;
 }
 
 export function startBeforeEach(options: FrusterTestUtilsOptions) {
@@ -169,9 +179,9 @@ export async function start(opts: FrusterTestUtilsOptions) {
 	if (opts.bus && opts.bus.clearClients && opts && opts.singleton)
 		opts.bus.clearClients();
 
-	if (bus && bus.clearClients && opts && opts.singleton) bus.clearClients();
+	if (bus && opts && opts.singleton) bus.clearClients();
 
-	let connection: Partial<FrusterTestUtilsConnection> = {};
+	let connection: FrusterTestUtilsConnectionBuilder = {};
 
 	if (opts.mockNats) {
 		connection = {
@@ -186,16 +196,16 @@ export async function start(opts: FrusterTestUtilsOptions) {
 	await connectBus(opts, connection);
 	await startService(opts, connection);
 
-	return connection;
+	return connection as FrusterTestUtilsConnection;
 }
 
 async function startService(
 	opts: FrusterTestUtilsOptions,
-	connection: FrusterTestUtilsConnection
+	connection: FrusterTestUtilsConnectionBuilder
 ) {
 	if (opts.service) {
 		if (typeof opts.service === "function") {
-			await opts.service(connection);
+			await opts.service(connection as FrusterTestUtilsConnection);
 			return connection;
 		}
 
@@ -225,8 +235,8 @@ async function startService(
 }
 
 async function connectToMongo(
-	opts: Pick<FrusterTestUtilsOptions, "mongoUrl">,
-	connection: FrusterTestUtilsConnection
+	opts: FrusterTestUtilsOptions,
+	connection: FrusterTestUtilsConnectionBuilder
 ) {
 	if (opts.mongoUrl) {
 		connection.db = await mongo.connect(opts.mongoUrl);
@@ -237,17 +247,14 @@ async function connectToMongo(
 
 async function connectBus(
 	opts: FrusterTestUtilsOptions,
-	connection: FrusterTestUtilsConnection
+	connection: FrusterTestUtilsConnectionBuilder
 ) {
+	bus = opts.bus || bus;
 	if (opts.bus) {
 		bus = opts.bus;
 
 		connection.natsClient = await opts.bus.connect({
 			address: connection.natsUrl,
-			forceResponseValidation:
-				"forceResponseValidation" in opts
-					? opts.forceResponseValidation
-					: true,
 			singleton: "singleton" in opts ? opts.singleton : true,
 			// @ts-ignore: Until schema resolver is added in non alpha release of bus
 			schemaResolver: opts.schemaResolver,
@@ -266,11 +273,11 @@ export async function startNatsServer(
 	const natsServerPort = opts.natsPort || anAvailablePort;
 	const natsUrl = "nats://localhost:" + natsServerPort;
 
-	let connection: FrusterTestUtilsConnection = {
+	let connection: Omit<FrusterTestUtilsConnection, "db"> = {
 		server: null,
 		natsUrl: natsUrl,
 		port: natsServerPort,
-		bus: opts.bus,
+		bus: opts.bus!,
 		natsClient: undefined,
 	};
 
@@ -292,12 +299,7 @@ export function stop(
 ) {
 	if (connection.bus && connection.bus.closeAll) connection.bus.closeAll();
 
-	if (
-		connection.bus &&
-		connection.bus.clearClients &&
-		options &&
-		options.singleton
-	) {
+	if (connection.bus && options?.singleton) {
 		connection.bus.clearClients();
 	}
 
