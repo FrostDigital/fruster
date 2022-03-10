@@ -78,14 +78,12 @@ export const validate = (schemaId: string, objectToValidate: any, isRequest = tr
  * @param {Object} validator
  */
 function getErrorMessage(validator: Ajv) {
-	if (
-		validator.errorsText().includes("data should NOT have additional properties") &&
-		validator.errors &&
-		validator.errors[0]
-	) {
+	const [firstError] = validator.errors || [];
+
+	if (firstError && firstError.keyword === "additionalProperties") {
 		try {
-			const errorParams = validator.errors[0].params;
-			return `${validator.errors[0].message}: ${errorParams.additionalProperty}`;
+			const errorParams = firstError.params;
+			return `${firstError.message}: ${errorParams.additionalProperty}`;
 			// This will result in a `data should NOT have additional properties: doors` error
 		} catch (err) {
 			// If something goes wrong above just return the errorsText.

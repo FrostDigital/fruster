@@ -53,9 +53,16 @@ export interface SubscribeOptions<ReqData = any> {
 	responseSchema?: any;
 
 	/**
-	 * If bus should validate requests using provided `requestSchema`
+	 * If bus should validate requests using provided `requestSchema`,
+	 * default true
 	 */
 	validateRequest?: boolean;
+
+	/**
+	 * If bus should validate requests using provided `responseSchema`,
+	 * default true
+	 */
+	validateResponse?: boolean;
 
 	/**
 	 * Function for handling subscription
@@ -89,6 +96,7 @@ const defaultOptions = {
 	createQueueGroup: true,
 	mustBeLoggedIn: false,
 	validateRequest: true,
+	validateResponse: true,
 	docs: {
 		description: "",
 		query: {},
@@ -440,10 +448,10 @@ export class Subscribe {
 	 * @param {Object} response
 	 * @param {String} replyTo
 	 */
-	validateResponse(response: FrusterResponse, replyTo: string) {
+	private validateResponse(response: FrusterResponse, replyTo: string) {
 		if (utils.isError(response)) {
 			this.handleError(response, response, replyTo);
-		} else if (this.options.responseSchema) {
+		} else if (this.options.responseSchema && this.options.validateResponse) {
 			try {
 				let schemaId = "";
 				schemaId =
