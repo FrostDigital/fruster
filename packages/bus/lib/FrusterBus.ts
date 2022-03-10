@@ -12,7 +12,7 @@ import * as schemas from "./schemas";
 import { HandleFn, Subscribe, subscribe as subscribeBuilder, SubscribeOptions } from "./subscribe";
 import subscribeCache from "./subscribe-cache";
 
-class FrusterBus {
+export class FrusterBus {
 	private connectedClients: ConnectedClient[] = [];
 
 	/**
@@ -240,9 +240,7 @@ class FrusterBus {
 	}
 }
 
-export default FrusterBus;
-
-class TestBus {
+export class TestBus {
 	constructor(private bus: FrusterBus) {}
 
 	subscribe<ReqData = any>(options: SubscribeOptions | string, cb?: HandleFn) {
