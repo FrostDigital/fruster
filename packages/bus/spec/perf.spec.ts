@@ -1,6 +1,6 @@
 import { startNatsServerAndConnectBus, TestConnection } from "./support/test-utils";
 import bus from "../index";
-import uuid from "uuid";
+import * as uuid from "uuid";
 
 describe("Performance", function () {
 	let natsConnection: TestConnection;

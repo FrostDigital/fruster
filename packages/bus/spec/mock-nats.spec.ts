@@ -1,4 +1,4 @@
-import uuid from "uuid";
+import * as uuid from "uuid";
 import bus from "../index";
 import conf from "../conf";
 

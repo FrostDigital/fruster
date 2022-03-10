@@ -1,4 +1,4 @@
-import uuid from "uuid";
+import * as uuid from "uuid";
 import constants from "./constants";
 
 const conf = {
@@ -11,14 +11,11 @@ const conf = {
 	// Generated id of service instance
 	instanceId: getServiceName() + "." + uuid.v4().substring(0, 8),
 
-	// Whether or not to validate responses
-	responseValidation: process.env.RESPONSE_VALIDATION === "true",
-
 	// Threshold for when fruster-bus will compress (gzip) data
 	compressThreshold: parseInt(process.env.COMPRESS_THRESHOLD || 1024 * 900 + ""),
 
-	// Chunks size, if message needs to be chunked each message data will be
-	// max this size
+	// Chunks size, if compressed message data does not fit into one chunk (defined by this config)
+	// it will be delivered in as many chunks needed to where each chunk has this size or less.
 	chunkSize: parseInt(process.env.CHUNK_SIZE || 1024 * 900 + ""),
 
 	// Timeout in ms for when chunks should have been delivered. If not all chunks

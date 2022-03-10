@@ -6,6 +6,7 @@ import pjson from "./package.json";
 // export * from "./lib/connect";
 export * from "./lib/model/FrusterRequest";
 export * from "./lib/model/FrusterResponse";
+export type { SubscribeOptions } from "./lib/subscribe";
 
 export default new FrusterBus();
 

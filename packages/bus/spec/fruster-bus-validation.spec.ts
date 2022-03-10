@@ -1,6 +1,5 @@
-import { startNatsServerAndConnectBus, TestConnection } from "./support/test-utils";
 import bus from "../index";
-import conf from "../conf";
+import { startNatsServerAndConnectBus, TestConnection } from "./support/test-utils";
 
 describe("Fruster bus validation", function () {
 	let natsConnection: TestConnection;
@@ -17,10 +16,7 @@ describe("Fruster bus validation", function () {
 	afterAll(() => {
 		natsConnection.server.kill();
 		bus.closeAll();
-		conf.responseValidation = false;
 	});
-
-	afterEach(() => (conf.responseValidation = false));
 
 	it("should validate request to schema", async () => {
 		const car = {
@@ -83,8 +79,6 @@ describe("Fruster bus validation", function () {
 	it("should fail validation of response", async (done) => {
 		bus.clearClients();
 		await bus.closeAll();
-
-		conf.responseValidation = true;
 
 		try {
 			natsConnection = await startNatsServerAndConnectBus(undefined, "/spec/support/test-schemas");

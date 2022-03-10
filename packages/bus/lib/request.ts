@@ -1,5 +1,5 @@
 import { Client } from "nats";
-import uuid from "uuid";
+import * as uuid from "uuid";
 import conf from "../conf";
 import constants from "../constants";
 import { FrusterDataMessage } from "./model/FrusterDataMessage";

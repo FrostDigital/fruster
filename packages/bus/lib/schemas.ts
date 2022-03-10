@@ -1,27 +1,28 @@
-import Ajv, { AdditionalPropertiesParams, Ajv as AjvType } from "ajv";
+import Ajv from "ajv";
+import addFormats from "ajv-formats";
 import fs from "fs-extra";
 import path from "path";
-import crypto from "crypto";
-import utils from "./util/utils";
 import conf from "../conf";
+import utils, { debugLog, hashSchema } from "./util/utils";
 
 const errors = require("./util/errors");
 
 // export const schemas = {};
 let parsedSchemas: any = [];
-let validator: AjvType;
-let customSchemaResolver: any = null;
+let validator: Ajv;
 
 /**
  * Read all schemas in schemas dir, compile and add them
  * to the validator (ajv).
  */
-export const init = (schemasPath: string, schemaResolver: any, disableSchemaCache = conf.disableSchemaCache) => {
-	customSchemaResolver = schemaResolver;
-
+export const init = (schemasPath: string, disableSchemaCache = conf.disableSchemaCache) => {
 	if (!parsedSchemas.length || disableSchemaCache) {
 		parsedSchemas = [];
-		validator = new Ajv({ missingRefs: "fail" });
+		validator = new Ajv({
+			strict: false,
+		});
+
+		addFormats(validator);
 
 		let fullSchemasDirPath = path.join(process.cwd(), schemasPath);
 
@@ -29,15 +30,13 @@ export const init = (schemasPath: string, schemaResolver: any, disableSchemaCach
 			fullSchemasDirPath = path.join(process.cwd(), "/schemas"); // For old schemas directory
 
 			if (!fs.existsSync(fullSchemasDirPath)) {
-				// log.warn(`Schema dir ${fullSchemasDirPath} does not exist`);
-				console.warn(`Schema dir ${fullSchemasDirPath} does not exist`);
 				return;
 			}
 		}
 
 		const files = fs.readdirSync(fullSchemasDirPath);
 
-		addSchema({ schemaFiles: files, schemaDir: fullSchemasDirPath });
+		addSchema({ schemasFromFolder: { files, schemasPath: fullSchemasDirPath } });
 	}
 };
 
@@ -78,15 +77,13 @@ export const validate = (schemaId: string, objectToValidate: any, isRequest = tr
 /**
  * @param {Object} validator
  */
-function getErrorMessage(validator: AjvType) {
-	if (
-		validator.errorsText().includes("data should NOT have additional properties") &&
-		validator.errors &&
-		validator.errors[0]
-	) {
+function getErrorMessage(validator: Ajv) {
+	const [firstError] = validator.errors || [];
+
+	if (firstError && firstError.keyword === "additionalProperties") {
 		try {
-			const errorParams = validator.errors[0].params as AdditionalPropertiesParams;
-			return `${validator.errors[0].message}: ${errorParams.additionalProperty}`;
+			const errorParams = firstError.params;
+			return `${firstError.message}: ${errorParams.additionalProperty}`;
 			// This will result in a `data should NOT have additional properties: doors` error
 		} catch (err) {
 			// If something goes wrong above just return the errorsText.
@@ -118,94 +115,62 @@ export const get = () => {
 	return parsedSchemas;
 };
 
-/**
- * @typedef {Object} AddSchemaOpts
- *
- * @property {Object?} schema
- * @property {string[]?} schemaFiles
- * @property {string?} schemaDir
- */
-
-/**
- *
- * @param {AddSchemaOpts} opts
- */
 export const addSchema = ({
 	schema,
-	schemaFiles = [],
-	schemaDir,
+	schemasFromFolder,
 }: {
 	schema?: any;
-	schemaFiles?: string[];
-	schemaDir?: string;
+	schemasFromFolder?: {
+		files: string[];
+		schemasPath: string;
+	};
 }) => {
-	let schemas = [];
+	let schemas: any = [];
 
-	// Divide schemaFiles into those resolved as regular json schema and those that
-	// should be resolved by custom schema resolver (if any)
-	const { jsonSchemas, customSchemaResolverSchemas } = schemaFiles.reduce<{
-		customSchemaResolverSchemas: string[];
-		jsonSchemas: string[];
-	}>(
-		(acc, filename) => {
-			if (filename.includes(".json")) {
-				acc.jsonSchemas.push(filename);
-			} else if (resolveWithCustomSchemaResolver(filename)) {
-				acc.customSchemaResolverSchemas.push(filename);
-			}
-			return acc;
-		},
-		{ customSchemaResolverSchemas: [], jsonSchemas: [] }
-	);
-
-	if (customSchemaResolverSchemas.length) {
-		const schemasParsedByCustomSchemaResolver =
-			customSchemaResolver.addSchemas(customSchemaResolverSchemas, schemaDir) || [];
-
-		if (schemasParsedByCustomSchemaResolver.length) {
-			// log.silly(
-			// 	`Schema(s) in ${schemasParsedByCustomSchemaResolver.join(", ")} was added by custom schema resolver`
-			// );
-			schemas = schemasParsedByCustomSchemaResolver;
-		} else {
-			// log.silly(
-			// 	`Schema(s) in ${schemasParsedByCustomSchemaResolver.join(
-			// 		", "
-			// 	)} could not be parsed by custom schema resolver`
-			// );
-		}
-	}
-
-	if (jsonSchemas.length && schemaDir) {
-		schemas = [...schemas, ...jsonSchemas.map((schemaFile) => fs.readJsonSync(path.join(schemaDir, schemaFile)))];
-	}
-
-	if (schema) {
-		// Note: Schema objects are never referenced by id, so we can safely generate a hash
-		schema.id = hashSchema({ ...schema, id: null });
+	if (schemasFromFolder) {
+		// Read .json files at this point, not that any other .js or .ts files
+		// are read as any other imported source file no need to handle those
+		const jsonSchemaFiles = schemasFromFolder.files.filter((f) => f.includes(".json"));
+		schemas = [
+			...schemas,
+			...jsonSchemaFiles.map((schemaFile) =>
+				fs.readJsonSync(path.join(schemasFromFolder.schemasPath, schemaFile))
+			),
+		];
+	} else if (schema) {
+		delete schema.id; // Remove in case legacy id is set
+		// Hash schema object and use that as unique id
+		schema.$id = hashSchema({ ...schema, $id: null });
 		schemas = [...schemas, schema];
 	}
 
 	if (!schemas.length) {
-		throw new Error("Should provide either `schemaFiles` or `schema` object");
+		throw new Error("Should provide either `schemasFromFolder` or `schema` object");
 	}
 
 	for (const schema of schemas) {
-		try {
-			if (schema.id && validator.getSchema(schema.id)) {
-				// log.silly(`Schema ${schema.id} already exists`);
-			} else {
-				const schemaIdentifier = schema.id;
+		if (schema.id && !schema.$id) {
+			// Patch schemas that are using old syntax with id instead of $id
+			console.warn(
+				"Schema has 'id' defined but according to spec '$id' should be used, consider renaming your schema"
+			);
+			schema.$id = schema.id;
+			delete schema.id;
+		}
 
-				if (!schema.id) {
-					console.error("Missing id for schema", JSON.stringify(schema));
+		try {
+			if (schema.$id && validator.getSchema(schema.$id)) {
+				debugLog(`Schema ${schema.$id} already exists in schema cache, will not add it again`);
+			} else {
+				if (!schema.$id) {
+					console.error("Missing $id for schema, cannot use it:", JSON.stringify(schema));
 					continue;
 				}
 
-				// log.silly(`Adding ${schemaIdentifier}`);
-
 				// Add schema to validator instance
 				validator.addSchema(schema);
+
+				debugLog(`Added ${schema.$id}`);
 
 				// Also add schema to make it available to meta data handler
 				parsedSchemas.push(schema);
@@ -216,17 +181,3 @@ export const addSchema = ({
 		}
 	}
 };
-
-function hashSchema(object: any) {
-	return crypto
-		.createHash("md5")
-		.update(JSON.stringify(object || {}))
-		.digest("hex");
-}
-
-function resolveWithCustomSchemaResolver(file: string) {
-	return (
-		(customSchemaResolver && !customSchemaResolver.filter) ||
-		(customSchemaResolver && customSchemaResolver.filter(file))
-	);
-}

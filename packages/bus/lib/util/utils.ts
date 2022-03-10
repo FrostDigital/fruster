@@ -1,8 +1,10 @@
 import _ from "lodash";
-import { FrusterResponse } from "../model/FrusterResponse";
-import { FrusterRequest, CreateFrusterRequest } from "../model/FrusterRequest";
 import conf from "../../conf";
 import constants from "../../constants";
+import { CreateFrusterRequest } from "../model/FrusterRequest";
+import { FrusterResponse } from "../model/FrusterResponse";
+import crypto from "crypto";
+
 const zlib = require("zlib");
 
 const ESCAPED_DOTS_STRING = "{dot}";
@@ -254,4 +256,17 @@ export function createResponseDataReplyToSubject(subject: string, transactionId:
  */
 export function createRequestDataReplyToSubject(subject: string, transactionId: string) {
 	return `_data_.${transactionId}.${subject}`;
+}
+
+export function debugLog(msg: string) {
+	if (process.env.DEBUG_FRUSTER_BUS) {
+		console.log("[FRUSTER BUS]", msg);
+	}
+}
+
+export function hashSchema(object: any) {
+	return crypto
+		.createHash("md5")
+		.update(JSON.stringify(object || {}))
+		.digest("hex");
 }

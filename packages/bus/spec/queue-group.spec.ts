@@ -1,6 +1,6 @@
 import bus from "../index";
 import { startNatsServerAndConnectBus, TestConnection } from "./support/test-utils";
-import uuid from "uuid";
+import * as uuid from "uuid";
 import path from "path";
 import { spawn } from "child_process";
 

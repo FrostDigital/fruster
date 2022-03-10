@@ -70,4 +70,6 @@ typings/
 # Intellij
 .idea
 
-dist/
+
+index.js
+index.d.ts

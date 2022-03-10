@@ -1,0 +1,7 @@
+{
+  "watch": ["lib", "*.ts", "spec"],
+  "ext": "ts",
+  "watchOptions": {
+    "followSymlinks": false
+  }
+}
