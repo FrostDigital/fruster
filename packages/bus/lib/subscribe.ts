@@ -218,6 +218,27 @@ export class Subscribe {
 				(jsonMsg: any, replyTo: string, actualSubject: string) =>
 					this.handleMessage(jsonMsg, replyTo, actualSubject)
 			);
+
+			// Add subscribe for the legacy "options request", however this is a no-op
+			// only here for backward compatibility, the calling service will simply
+			// be redirected to the actual subject
+			natsClient.subscribe(
+				"options." + this.getParsedSubject().subject,
+				this.natsSubscribeOptions || {},
+				(jsonMsg: any, replyTo: string) => {
+					publish({
+						subject: replyTo,
+						message: {
+							reqId: jsonMsg.reqId,
+							transactionId: jsonMsg.transactionId,
+							status: 200,
+							data: {
+								protocol: "NATS",
+							},
+						},
+					});
+				}
+			);
 		} catch (err) {
 			const errorMessage = `bus.subscribe subject must be string but got ${typeof this.getParsedSubject()
 				.subject} with value ${this.getParsedSubject().subject}`;

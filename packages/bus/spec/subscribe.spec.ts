@@ -142,7 +142,7 @@ describe("subscribe", function () {
 		}
 	});
 
-	it("should transalte uncaught exception to internal server error when Error is thrown", async (done) => {
+	it("should translate uncaught exception to internal server error when Error is thrown", async (done) => {
 		bus.subscribe({ subject: "throw-up-again" }, async () => {
 			throw new Error("This is uncaught");
 		});
@@ -161,5 +161,26 @@ describe("subscribe", function () {
 			expect(err.error.detail).toMatch("This is uncaught");
 			done();
 		}
+	});
+
+	it("should subscribe on legacy options request to keep backward compatibility", async () => {
+		bus.subscribe({ subject: "has-options" }, async () => {
+			return {
+				status: 200,
+			};
+		});
+
+		const optionsResponse = await bus.request({
+			subject: "options.has-options",
+			message: {
+				reqId: "reqId",
+				data: {},
+			},
+		});
+
+		expect(optionsResponse.data.protocol).toBe("NATS");
+		expect(optionsResponse.reqId).toBe("reqId");
+		expect(optionsResponse.transactionId).toBeDefined();
+		expect(optionsResponse.from).toBeDefined();
 	});
 });
