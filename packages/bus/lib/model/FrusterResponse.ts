@@ -1,7 +1,7 @@
 import { FrusterError } from "./FrusterError";
 
 /**
- * Fruster response model, only used for JSDoc.
+ * Fruster response model.
  *
  * @template T the type of data
  */
@@ -14,14 +14,14 @@ export interface FrusterResponse<T = any> {
 	/**
 	 * (http) status code of response
 	 */
-	status?: number;
+	status: number;
 
 	/**
 	 * Transaction id
 	 */
 	transactionId?: string;
 
-	data?: T;
+	data: T;
 
 	/**
 	 * Error data, set if response is an error
@@ -83,3 +83,6 @@ export interface ImmutableFrusterResponse<T = any> extends FrusterResponse<T> {
 	 */
 	ms?: Readonly<number>;
 }
+
+export interface FrusterErrorResponse
+	extends Pick<FrusterResponse, "reqId" | "status" | "transactionId" | "error" | "thrower" | "ms" | "data"> {}

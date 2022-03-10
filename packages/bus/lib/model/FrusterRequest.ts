@@ -1,5 +1,5 @@
 /**
- * Fruster request model, only used for JSDoc.
+ * Fruster request model.
  *
  * @template T the type of data
  */
@@ -147,6 +147,7 @@ export interface RequestOptions<T = any> {
 	subject: string;
 	message: CreateFrusterRequest<T>;
 	timeout?: number;
+	throwErrors?: boolean;
 }
 
 export interface RequestManyOptions extends RequestOptions {

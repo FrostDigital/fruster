@@ -21,7 +21,7 @@ describe("request", function () {
 	it("should add toString function to object errors", async () => {
 		const errorObj = {
 			status: 500,
-			error: { code: "MADE_UP_ERROR", detail: "Something completely made up happend" },
+			error: { code: "MADE_UP_ERROR", detail: "Something completely made up happened" },
 		};
 
 		bus.subscribe({ subject: "ram-jam" }, () => {
@@ -53,5 +53,27 @@ describe("request", function () {
 				)
 			);
 		}
+	});
+
+	it("should not throw errors if throwErrors is set to false", async () => {
+		const errorObj = {
+			status: 500,
+			error: { code: "MADE_UP_ERROR", detail: "Something completely made up happened" },
+		};
+
+		bus.subscribe({ subject: "qwerty" }, () => {
+			throw errorObj;
+		});
+
+		const err = await bus.request({
+			subject: "qwerty",
+			message: {
+				reqId: "hello",
+			},
+			throwErrors: false,
+		});
+
+		expect(err.status).toBe(500);
+		expect(err.error).toBeDefined();
 	});
 });

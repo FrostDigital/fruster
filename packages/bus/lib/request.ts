@@ -4,7 +4,7 @@ import conf from "../conf";
 import constants from "../constants";
 import { FrusterDataMessage } from "./model/FrusterDataMessage";
 import { RequestManyOptions, RequestOptions } from "./model/FrusterRequest";
-import { FrusterResponse, ImmutableFrusterResponse } from "./model/FrusterResponse";
+import { FrusterErrorResponse, FrusterResponse, ImmutableFrusterResponse } from "./model/FrusterResponse";
 import errors from "./util/errors";
 import utils, { createResponseDataReplyToSubject, createResponseReplyToSubject } from "./util/utils";
 
@@ -15,7 +15,8 @@ export const request = (client: Client) => {
 
 	return {
 		request: async <ReqData = any, ResData = any>(options: RequestOptions<ReqData>) => {
-			const res = await doRequest(options);
+			options.throwErrors = options.throwErrors === undefined ? true : options.throwErrors;
+			const res = await busRequest(options);
 
 			if (Array.isArray(res)) {
 				throw new Error(
@@ -27,7 +28,8 @@ export const request = (client: Client) => {
 		},
 		requestMany: async (options: RequestManyOptions) => {
 			if (!options.maxResponses) options.maxResponses = 10;
-			const responses = await doRequest(options);
+			options.throwErrors = options.throwErrors === undefined ? true : options.throwErrors;
+			const responses = await busRequest(options);
 			return Array.isArray(responses) ? responses : [responses];
 		},
 	};
@@ -38,20 +40,8 @@ export const request = (client: Client) => {
  * Returns error if message is erroneous (as defined in Fruster
  * message model) or if it times out.
  *
- * Will send options request over bus to decided which protocol
- * to use.
- *
- * {String} subject
- * {Object} json message to send
- * {Integer} optional timeout in ms
- *  {boolean} if options response should be returned directly
- *
  * @return {Promise<FrusterResponse>} promise that resolves the response
  */
-function doRequest(reqOptions: RequestOptions) {
-	return busRequest(reqOptions);
-}
-
 function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<FrusterResponse | FrusterResponse[]> {
 	return new Promise(async (resolve, reject) => {
 		reqOptions.message.transactionId = uuid.v4();
@@ -116,10 +106,15 @@ function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<Fr
 				if (res.dataEncoding === constants.CONTENT_ENCODING_GZIP) {
 					res.data = await utils.decompress(resChunks.length > 0 ? resChunks.join("") : res.data);
 				} else {
-					const error: FrusterResponse = errors.get("INVALID_DATA_ENCODING", res.dataEncoding);
+					const error: FrusterErrorResponse = errors.get("INVALID_DATA_ENCODING", res.dataEncoding);
 					error.reqId = reqOptions.message.reqId;
 					error.transactionId = reqOptions.message.reqId;
-					addToStringFunctionAndReject(error, reject);
+
+					if (reqOptions.throwErrors) {
+						addToStringFunctionAndReject(error, reject);
+					} else {
+						resolve(error);
+					}
 				}
 			}
 
@@ -139,7 +134,11 @@ function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<Fr
 				}
 			} else {
 				if (utils.isError(res)) {
-					addToStringFunctionAndReject(res, reject);
+					if (reqOptions.throwErrors) {
+						addToStringFunctionAndReject(res, reject);
+					} else {
+						resolve(res);
+					}
 				} else {
 					resolve(res);
 				}
@@ -158,9 +157,7 @@ function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<Fr
 
 					resolve(responses);
 				} else {
-					// TODO: Fix this
-					// @ts-ignore
-					const errorResp: FrusterResponse = errors.get(
+					const errorResp: FrusterErrorResponse = errors.get(
 						"BUS_RESPONSE_TIMEOUT",
 						reqOptions.subject,
 						reqOptions.timeout
@@ -169,7 +166,11 @@ function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<Fr
 					errorResp.transactionId = reqOptions.message.transactionId!;
 					errorResp.thrower = conf.serviceName;
 
-					addToStringFunctionAndReject(errorResp, reject);
+					if (reqOptions.throwErrors) {
+						addToStringFunctionAndReject(errorResp, reject);
+					} else {
+						resolve(errorResp);
+					}
 				}
 			});
 		}
