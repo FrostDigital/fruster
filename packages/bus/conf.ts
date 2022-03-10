@@ -11,9 +11,6 @@ const conf = {
 	// Generated id of service instance
 	instanceId: getServiceName() + "." + uuid.v4().substring(0, 8),
 
-	// Whether or not to validate responses
-	responseValidation: process.env.RESPONSE_VALIDATION === "true",
-
 	// Threshold for when fruster-bus will compress (gzip) data
 	compressThreshold: parseInt(process.env.COMPRESS_THRESHOLD || 1024 * 900 + ""),
 
