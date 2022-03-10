@@ -1,11 +1,21 @@
 import conf from "./conf";
-import FrusterBus from "./lib/FrusterBus";
+import { FrusterBus } from "./lib/FrusterBus";
 import pjson from "./package.json";
 export * from "./lib/model/FrusterRequest";
 export * from "./lib/model/FrusterResponse";
 export type { SubscribeOptions } from "./lib/subscribe";
 
-export default new FrusterBus();
+export type { FrusterBus } from "./lib/FrusterBus";
+
+const bus = new FrusterBus();
+
+export default bus;
+
+/**
+ * Test friendly version of the bus. Is not as picky which will
+ * make your life easier when writing tests.
+ */
+export const testBus = bus.testBus;
 
 /**
  * Fruster bus version
@@ -26,5 +36,3 @@ export const instanceId = conf.instanceId;
  * @example fruster-user-service
  */
 export const serviceName = conf.serviceName;
-
-// TODO: Same as ConnectParams?
