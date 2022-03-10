@@ -69,17 +69,17 @@ describe("frusterTransformerPlugin", () => {
       );
     });
 
-    fit("should parse and set schemas for pick and omit", () => {
-      // expect(alignString(transformedFile)).toMatch(
-      //   `requestSchema: { \"type\": \"array\", \"items\": { \"type\": \"object\", \"properties\": { \"model\": { \"type\": \"string\" } }, \"additionalProperties\": false, \"required\": [\"model\"] }, \"$schema\": \"http://json-schema.org/draft-07/schema#\" }`
-      // );
+    // it("should parse and set schemas for pick and omit", () => {
+    //   // expect(alignString(transformedFile)).toMatch(
+    //   //   `requestSchema: { \"type\": \"array\", \"items\": { \"type\": \"object\", \"properties\": { \"model\": { \"type\": \"string\" } }, \"additionalProperties\": false, \"required\": [\"model\"] }, \"$schema\": \"http://json-schema.org/draft-07/schema#\" }`
+    //   // );
 
-      // expect(alignString(transformedFile)).toMatch(
-      //   `responseSchema: { \"type\": \"array\", \"items\": { \"type\": \"object\", \"properties\": { \"model\": { \"type\": \"string\" } }, \"additionalProperties\": false, \"required\": [\"model\"] }, \"$schema\": \"http://json-schema.org/draft-07/schema#\" } }`
-      // );
+    //   // expect(alignString(transformedFile)).toMatch(
+    //   //   `responseSchema: { \"type\": \"array\", \"items\": { \"type\": \"object\", \"properties\": { \"model\": { \"type\": \"string\" } }, \"additionalProperties\": false, \"required\": [\"model\"] }, \"$schema\": \"http://json-schema.org/draft-07/schema#\" } }`
+    //   // );
 
-      console.log(transformedFile);
-    });
+    //   console.log(transformedFile);
+    // });
   });
 });
 

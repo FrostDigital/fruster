@@ -67,8 +67,6 @@ export function getFrusterRequestType(node: ts.ParameterDeclaration) {
   if (reqTypeRef) {
     const typeArg = (reqTypeRef.typeArguments || [])[0];
 
-    console.log(typeArg.getText());
-
     if (!isKeyword(typeArg)) {
       return typeArg;
     }
