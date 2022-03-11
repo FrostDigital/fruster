@@ -6,7 +6,7 @@
   "scripts": {
     "test": "jest",
     "prepublish": "npm run build",
-    "build": "tsc"
+    "build": "rimraf ./dist && tsc --project tsconfig.dist.json"
   },
   "author": "",
   "license": "ISC",
