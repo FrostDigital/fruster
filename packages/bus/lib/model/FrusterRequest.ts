@@ -1,9 +1,12 @@
+type Params = { [x: string]: string };
+type Query = { [x: string]: string };
+
 /**
  * Fruster request model.
  *
  * @template T the type of data
  */
-export interface FrusterRequest<T = any> {
+export interface FrusterRequest<T = any, P = Params, Q = Query> {
 	/**
 	 * Request id.
 	 *
@@ -43,12 +46,12 @@ export interface FrusterRequest<T = any> {
 	/**
 	 * HTTP query params
 	 */
-	query?: { [x: string]: string };
+	query?: Q;
 
 	/**
 	 * HTTP path params
 	 */
-	params?: { [x: string]: string };
+	params?: P;
 
 	/**
 	 * HTTP headers
