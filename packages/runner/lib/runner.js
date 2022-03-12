@@ -5,11 +5,15 @@ const path = require("path");
 const frusterTransformer = require("@fruster/ts-transformer").default;
 const tsConfig = require(path.join(process.cwd(), "/tsconfig.json"));
 
-module.export = main = (args) => {
+/**
+ *
+ * @param {string[]} args
+ */
+function main(args) {
   const { options, fileNames } = ts.parseJsonConfigFileContent(
     tsConfig,
     ts.sys,
-    __dirname
+    process.cwd()
   );
 
   const program = ts.createProgram(fileNames, options);
@@ -40,6 +44,6 @@ module.export = main = (args) => {
   });
 
   require(path.join(process.cwd(), entryFile));
-};
+}
 
 main(process.argv);
