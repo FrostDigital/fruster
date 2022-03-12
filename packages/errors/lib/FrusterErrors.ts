@@ -1,4 +1,4 @@
-import * as log from "fruster-log";
+import log from "@fruster/log";
 import { v4 } from "uuid";
 import {
 	BAD_REQUEST,
@@ -27,7 +27,9 @@ class FrusterErrors {
 	private buildErrors(errorModels: ErrorModel[]) {
 		// Append default errors to errorModel, if needed to.
 		DEFAULT_ERRORS.forEach((defaultError) => {
-			if (!errorModels.find((error) => error.code === defaultError.code)) {
+			if (
+				!errorModels.find((error) => error.code === defaultError.code)
+			) {
 				errorModels.push(defaultError);
 			}
 		});
