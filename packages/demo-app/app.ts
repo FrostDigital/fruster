@@ -13,7 +13,7 @@ import * as config from "./config";
  */
 (async function () {
   try {
-    await start(config.bus);
+    await start({ natsUrl: config.bus });
     log.info(`Successfully started demo-app`);
     await startHealthCheck(bus);
   } catch (err: any) {

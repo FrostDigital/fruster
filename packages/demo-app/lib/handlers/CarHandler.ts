@@ -26,7 +26,15 @@ class CarHandler {
   @subscribe({
     subject: "http.get.car",
   })
-  handleHttp(req: FrusterRequest<any>): FrusterResponse<Car> {
+  handleHttp(
+    req: FrusterRequest<
+      any,
+      any,
+      {
+        sort: string;
+      }
+    >
+  ): FrusterResponse<Car> {
     return {
       status: 200,
       data: {
