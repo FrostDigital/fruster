@@ -19,7 +19,7 @@
     "url": "git+https://github.com/FrostDigital/fruster.git"
   },
   "scripts": {
-    "test": "echo \"Error: run tests from root\" && exit 1"
+    "test": "echo \"No tests, yet\""
   },
   "bugs": {
     "url": "https://github.com/FrostDigital/fruster/issues"
