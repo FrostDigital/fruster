@@ -1,6 +1,6 @@
 {
   "name": "demo-app",
-  "version": "1.0.0-alpha.4",
+  "version": "1.0.0-alpha.5",
   "description": "Demo app for fruster micro services",
   "private": true,
   "homepage": "https://github.com/FrostDigital/fruster#readme",
@@ -20,7 +20,7 @@
     "@fruster/decorators": "^1.0.0-alpha.4",
     "@fruster/health": "^1.0.0-alpha.4",
     "@fruster/log": "^1.0.0-alpha.4",
-    "@fruster/runner": "^1.0.0-alpha.4",
+    "@fruster/runner": "^1.0.0-alpha.5",
     "@types/uuid": "^8.3.4",
     "uuid": "^8.3.2"
   },
