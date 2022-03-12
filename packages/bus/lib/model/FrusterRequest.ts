@@ -33,7 +33,7 @@ export interface FrusterRequest<T = any, P = Params, Q = Query> {
 	/**
 	 * Logged in user
 	 */
-	user?: User;
+	user: User;
 
 	/**
 	 * Path used for request if request was HTTP
@@ -48,17 +48,17 @@ export interface FrusterRequest<T = any, P = Params, Q = Query> {
 	/**
 	 * HTTP query params
 	 */
-	query?: Q;
+	query: Q;
 
 	/**
 	 * HTTP path params
 	 */
-	params?: P;
+	params: P;
 
 	/**
 	 * HTTP headers
 	 */
-	headers?: { [x: string]: string };
+	headers: { [x: string]: string };
 
 	/**
 	 * Optional encoding
@@ -78,10 +78,15 @@ export interface FrusterRequest<T = any, P = Params, Q = Query> {
 	chunks?: number;
 }
 
-export interface CreateFrusterRequest<T = any> extends Omit<FrusterRequest<T>, "data" | "reqId" | "transactionId"> {
+export interface CreateFrusterRequest<T = any>
+	extends Omit<FrusterRequest<T>, "data" | "reqId" | "transactionId" | "params" | "query" | "user" | "headers"> {
 	reqId?: string;
 	data?: T;
 	transactionId?: string;
+	params?: { [x: string]: string };
+	query?: { [x: string]: string };
+	user?: User;
+	headers?: FrusterRequest["headers"];
 }
 
 export interface ImmutableFrusterRequest<T = any> extends FrusterRequest<T> {

@@ -83,7 +83,7 @@ export interface SubscribeOptions<ReqData = any> {
 	/**
 	 * Flag to mark if endpoint is deprecated. Will bubble up to auto generated API docs.
 	 */
-	deprecated?: boolean;
+	deprecated?: boolean | string;
 }
 
 export const subscribe = (client: Client) => {
