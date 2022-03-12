@@ -1,7 +1,7 @@
 type Params = { [x: string]: string };
 type Query = { [x: string]: string };
 
-export type User = object & { id: string; scopes: string[] };
+export type User = { id: string; scopes: string[]; [x: string]: any };
 
 /**
  * Fruster request model.
