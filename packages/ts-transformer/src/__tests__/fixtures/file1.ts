@@ -1,19 +1,20 @@
+import { FrusterRequest, FrusterResponse } from "@fruster/bus";
+
 interface Car {
   model: string;
   brand: string;
 }
 
-interface FrusterRequest<T> {
-  data: T;
-}
-
-interface FrusterResponse<T> {
-  data: T;
-}
+type Query = {
+  foo: string;
+};
 
 export class Handler {
-  handle(req: FrusterRequest<Car>): FrusterResponse<Car> {
+  handle(
+    req: FrusterRequest<Car, { id: string }, Query>
+  ): FrusterResponse<Car> {
     return {
+      status: 200,
       data: {
         model: "model 3",
         brand: "Tesla",
@@ -23,6 +24,7 @@ export class Handler {
 
   async handle2(req: FrusterRequest<Car>): Promise<FrusterResponse<Car>> {
     return {
+      status: 200,
       data: {
         model: "model 3",
         brand: "Tesla",
@@ -32,6 +34,7 @@ export class Handler {
 
   async handle3(req: FrusterRequest<Car>): Promise<FrusterResponse<number>> {
     return {
+      status: 200,
       data: 1,
     };
   }

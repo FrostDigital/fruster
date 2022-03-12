@@ -4,7 +4,7 @@ import {
   findFirstChildOfKind,
   findFirstChildOfKindOrThrow,
   findFirstNestedChildOfKind,
-  getFrusterRequestType,
+  getFrusterRequestTypes,
   getFrusterResponseType,
 } from "../transformers/utils";
 
@@ -42,9 +42,7 @@ describe("utils", () => {
     );
 
     expect(node?.kind).toBe(ts.SyntaxKind.MethodDeclaration);
-    expect(node?.getText()).toMatch(
-      "handle(req: FrusterRequest<Car>): FrusterResponse<Car>"
-    );
+    expect(node?.getText()).toMatch("handle(");
   });
 
   it("should findFirstChildOfKindOrThrow", () => {
@@ -92,7 +90,7 @@ describe("utils", () => {
     expect(nodes[1].kind).toBe(ts.SyntaxKind.PropertySignature);
   });
 
-  it("should getFrusterRequestType", () => {
+  it("should getFrusterRequestTypes", () => {
     const testFile1 = program.getSourceFile(testFiles[0])!;
 
     const param = findFirstNestedChildOfKind(
@@ -104,10 +102,12 @@ describe("utils", () => {
       fail("should have found parameter");
     }
 
-    const typeNode = getFrusterRequestType(param as ts.ParameterDeclaration);
+    const reqTypes = getFrusterRequestTypes(param as ts.ParameterDeclaration);
 
-    expect(typeNode).toBeDefined();
-    expect(typeNode?.getText()).toBe("Car");
+    expect(reqTypes).toBeDefined();
+    expect(reqTypes.reqBodyTypeNode?.getText()).toBe("Car");
+    expect(reqTypes.paramsTypeNode?.getText()).toBe("{ id: string }");
+    expect(reqTypes.queryTypeNode?.getText()).toBe("Query"); // TODO
   });
 
   it("should getFrusterResponseType", () => {

@@ -6,8 +6,9 @@ import {
   findFirstChildOfKind,
   findFirstChildOfKindOrThrow,
   findFirstNestedChildOfKind,
-  getFrusterRequestType,
+  getFrusterRequestTypes,
   getFrusterResponseType,
+  parseJson,
 } from "./utils";
 
 const DEBUG = !!process.env.DEBUG_FRUSTER_TRANSFORMER;
@@ -77,7 +78,9 @@ function parseHandler(
   function visitSubscribeMethodOrPropertyDeclaration(
     node: ts.Node,
     reqSchema?: ts.ObjectLiteralExpression,
-    resSchema?: ts.ObjectLiteralExpression
+    resSchema?: ts.ObjectLiteralExpression,
+    paramsDoc?: ts.ObjectLiteralExpression,
+    queryDoc?: ts.ObjectLiteralExpression
   ) {
     if (ts.isDecorator(node)) {
       const objectLiteral = findFirstNestedChildOfKind(
@@ -94,7 +97,24 @@ function parseHandler(
         return node;
       }
 
-      const properties = [...objectLiteral.properties];
+      // const docsPropertyAssignmnet = findFirstNestedChildOfKind(
+      //   objectLiteral,
+      //   ts.SyntaxKind.PropertyAssignment,
+      //   (n: ts.PropertyAssignment) => n.name.getText() === "docs"
+      // );
+
+      // const docsObjectLiteral = findFirstChildOfKindOrThrow(
+      //   docsPropertyAssignmnet,
+      //   ts.SyntaxKind.ObjectLiteralExpression
+      // ) as ts.ObjectLiteralExpression;
+
+      const subProperties = [
+        ...objectLiteral.properties.filter((p) => p.name?.getText() !== "docs"),
+      ];
+      const docsObjectLiteral =
+        getDocsObjectLiteralFromSubscribe(objectLiteral) ||
+        ts.factory.createObjectLiteralExpression();
+      const docsProperties = [...(docsObjectLiteral?.properties || [])];
 
       if (reqSchema) {
         if (
@@ -106,10 +126,10 @@ function parseHandler(
             `Request schema was parsed, but requestSchema is already set in @subscribe so skipping it`
           );
         } else {
-          properties.push(
+          subProperties.push(
             ts.factory.createPropertyAssignment(
               ts.factory.createIdentifier("requestSchema"),
-              ts.factory.createObjectLiteralExpression(reqSchema.properties)
+              reqSchema
             )
           );
 
@@ -127,10 +147,10 @@ function parseHandler(
             `Response schema was parsed, but responseSchema is already set in @subscribe so skipping it`
           );
         } else {
-          properties.push(
+          subProperties.push(
             ts.factory.createPropertyAssignment(
               ts.factory.createIdentifier("responseSchema"),
-              ts.factory.createObjectLiteralExpression(resSchema.properties)
+              resSchema
             )
           );
 
@@ -138,9 +158,55 @@ function parseHandler(
         }
       }
 
-      if (properties.length === objectLiteral.properties.length) {
-        return node; // no change
+      if (queryDoc) {
+        const queryProp = docsProperties.find(
+          (p) => p?.name.getText() === "query"
+        );
+
+        if (queryProp) {
+          debugLog(
+            `Query docs parsed, but query is already set in @subscribe so skipping it`
+          );
+        } else {
+          docsProperties.push(
+            ts.factory.createPropertyAssignment(
+              ts.factory.createIdentifier("query"),
+              queryDoc
+            )
+          );
+        }
       }
+
+      if (paramsDoc) {
+        const paramsProp = docsProperties.find(
+          (p) => p?.name.getText() === "params"
+        );
+
+        if (paramsProp) {
+          debugLog(
+            `Params docs parsed, but param is already set in @subscribe so skipping it`
+          );
+        } else {
+          docsProperties.push(
+            ts.factory.createPropertyAssignment(
+              ts.factory.createIdentifier("params"),
+              paramsDoc
+            )
+          );
+        }
+      }
+
+      const updatedDocs = ts.factory.updateObjectLiteralExpression(
+        docsObjectLiteral,
+        docsProperties
+      );
+
+      subProperties.push(
+        ts.factory.createPropertyAssignment(
+          ts.factory.createIdentifier("docs"),
+          updatedDocs
+        )
+      );
 
       return ts.factory.createDecorator(
         ts.factory.createCallExpression(
@@ -149,7 +215,7 @@ function parseHandler(
             ts.SyntaxKind.Identifier
           ) as ts.Identifier,
           undefined,
-          [ts.factory.createObjectLiteralExpression(properties, false)]
+          [ts.factory.createObjectLiteralExpression(subProperties, false)]
         )
       );
     }
@@ -226,16 +292,28 @@ function parseHandler(
         );
       }
 
-      const reqTypeNode = getFrusterRequestType(parameter);
+      const { reqBodyTypeNode, queryTypeNode, paramsTypeNode } =
+        getFrusterRequestTypes(parameter);
+
       const resTypeNode = returnType
         ? getFrusterResponseType(returnType as ts.TypeReferenceNode)
         : undefined;
 
       let reqSchema: ts.ObjectLiteralExpression | undefined;
       let resSchema: ts.ObjectLiteralExpression | undefined;
+      let paramsDoc: ts.ObjectLiteralExpression | undefined;
+      let queryDoc: ts.ObjectLiteralExpression | undefined;
 
-      if (reqTypeNode) {
-        reqSchema = getSchemaForType(program, checker, reqTypeNode);
+      if (reqBodyTypeNode) {
+        reqSchema = getSchemaForType(program, checker, reqBodyTypeNode);
+      }
+
+      if (paramsTypeNode) {
+        paramsDoc = getQueryOrParamDocs(checker, paramsTypeNode);
+      }
+
+      if (queryTypeNode) {
+        queryDoc = getQueryOrParamDocs(checker, queryTypeNode);
       }
 
       if (resTypeNode) {
@@ -245,7 +323,13 @@ function parseHandler(
       return ts.visitEachChild(
         methodOrPropertyDeclaration,
         (node) =>
-          visitSubscribeMethodOrPropertyDeclaration(node, reqSchema, resSchema),
+          visitSubscribeMethodOrPropertyDeclaration(
+            node,
+            reqSchema,
+            resSchema,
+            paramsDoc,
+            queryDoc
+          ),
         ctx
       );
     }
@@ -367,8 +451,43 @@ function getSchemaForType(
     schema = generator.getSchemaForSymbol(symbolList[0].name, true);
   }
 
-  return ts.parseJsonText("tmp", JSON.stringify(schema)).statements[0]
-    .expression as ts.ObjectLiteralExpression;
+  return parseJson(schema);
+}
+
+function getQueryOrParamDocs(checker: ts.TypeChecker, typeNode: ts.TypeNode) {
+  const type = checker.getTypeFromTypeNode(typeNode);
+
+  const props = type.getProperties().map((p) => ({
+    name: p.name,
+    description: (p.getDocumentationComment(checker)[0]?.text || "").trim(),
+  }));
+
+  const propsAsObj = props.reduce((out, p) => {
+    out[p.name] = p.description || "";
+
+    return out;
+  }, {});
+
+  return parseJson(propsAsObj);
+}
+
+function getDocsObjectLiteralFromSubscribe(node: ts.ObjectLiteralExpression) {
+  const docsPropertyAssignment = findFirstNestedChildOfKind(
+    node,
+    ts.SyntaxKind.PropertyAssignment,
+    (n: ts.PropertyAssignment) => n.name.getText() === "docs"
+  );
+
+  if (!docsPropertyAssignment) {
+    return;
+  }
+
+  const docsObjectLiteral = findFirstChildOfKindOrThrow(
+    docsPropertyAssignment,
+    ts.SyntaxKind.ObjectLiteralExpression
+  ) as ts.ObjectLiteralExpression;
+
+  return docsObjectLiteral;
 }
 
 function debugLog(msg: string) {

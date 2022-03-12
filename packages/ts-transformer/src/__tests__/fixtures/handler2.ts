@@ -1,12 +1,12 @@
-import { Car, FrusterRequest, FrusterResponse, subscribe } from "./MockTypes";
-
+import { FrusterRequest, FrusterResponse } from "@fruster/bus";
+import { Car, subscribe } from "./MockTypes";
 export class Handler {
   @subscribe({ subject: "foo.bar" })
   async handleInlineTypeLiteral(
     req: FrusterRequest<{ model: string }>
   ): Promise<FrusterResponse<{ model: string }>> {
     return {
-      reqId: "foo",
+      status: 200,
       data: {
         model: "string",
       },
@@ -18,7 +18,7 @@ export class Handler {
     req: FrusterRequest<{ model: string }[]>
   ): Promise<FrusterResponse<{ model: string }[]>> {
     return {
-      reqId: "foo",
+      status: 200,
       data: [
         {
           model: "string",
@@ -32,7 +32,7 @@ export class Handler {
     req: FrusterRequest<Car[]>
   ): Promise<FrusterResponse<Car[]>> {
     return {
-      reqId: "foo",
+      status: 200,
       data: [
         {
           model: "string",
@@ -46,7 +46,7 @@ export class Handler {
     req: FrusterRequest<Omit<Car, "brand">>
   ): Promise<FrusterResponse<Pick<Car, "model">>> {
     return {
-      reqId: "foo",
+      status: 200,
       data: {
         model: "string",
       },

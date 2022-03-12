@@ -59,18 +59,29 @@ export function findFirstChildOfKindOrThrow(
   return res;
 }
 
-export function getFrusterRequestType(node: ts.ParameterDeclaration) {
+export function getFrusterRequestTypes(node: ts.ParameterDeclaration) {
   const reqTypeRef = findFirstChildOfKind(node, ts.SyntaxKind.TypeReference) as
     | ts.TypeReferenceNode
     | undefined;
 
   if (reqTypeRef) {
-    const typeArg = (reqTypeRef.typeArguments || [])[0];
+    const [reqBodyTypeNode, paramsTypeNode, queryTypeNode] =
+      reqTypeRef.typeArguments || [];
 
-    if (!isKeyword(typeArg)) {
-      return typeArg;
-    }
+    return {
+      reqBodyTypeNode: !isKeyword(reqBodyTypeNode)
+        ? reqBodyTypeNode
+        : undefined,
+      paramsTypeNode: !isKeyword(paramsTypeNode) ? paramsTypeNode : undefined,
+      queryTypeNode: !isKeyword(queryTypeNode) ? queryTypeNode : undefined,
+    };
   }
+
+  return {
+    reqBodyTypeNode: undefined,
+    paramsTypeNode: undefined,
+    queryTypeNode: undefined,
+  };
 }
 
 export function getFrusterResponseType(node: ts.TypeReferenceNode) {
@@ -105,4 +116,14 @@ function isKeyword(node?: ts.Node) {
     ts.SyntaxKind.UndefinedKeyword,
     ts.SyntaxKind.AnyKeyword,
   ].includes(node.kind);
+}
+
+/**
+ * Parses a json object into object literal expression.
+ * @param json
+ * @returns
+ */
+export function parseJson(json: any) {
+  return ts.parseJsonText("tmp", JSON.stringify(json)).statements[0]
+    .expression as ts.ObjectLiteralExpression;
 }

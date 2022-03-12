@@ -6,6 +6,7 @@ import frusterTransformerPlugin, {
 const testFiles = [
   "src/__tests__/fixtures/handler1.ts",
   "src/__tests__/fixtures/handler2.ts",
+  "src/__tests__/fixtures/handler3.ts",
 ];
 
 describe("frusterTransformerPlugin", () => {
@@ -61,11 +62,11 @@ describe("frusterTransformerPlugin", () => {
 
     it("should parse and set schemas for array", () => {
       expect(alignString(transformedFile)).toMatch(
-        `requestSchema: { \"type\": \"array\", \"items\": { \"type\": \"object\", \"properties\": { \"model\": { \"type\": \"string\" } }, \"additionalProperties\": false, \"required\": [\"model\"] }, \"$schema\": \"http://json-schema.org/draft-07/schema#\" }`
+        `requestSchema: { \"type\": \"array\", \"items\"`
       );
 
       expect(alignString(transformedFile)).toMatch(
-        `responseSchema: { \"type\": \"array\", \"items\": { \"type\": \"object\", \"properties\": { \"model\": { \"type\": \"string\" } }, \"additionalProperties\": false, \"required\": [\"model\"] }, \"$schema\": \"http://json-schema.org/draft-07/schema#\" } }`
+        `responseSchema: { \"type\": \"array\", \"items\"`
       );
     });
 
@@ -80,6 +81,19 @@ describe("frusterTransformerPlugin", () => {
 
     //   console.log(transformedFile);
     // });
+  });
+
+  describe("handle query and param parsing", () => {
+    let transformedFile = "";
+
+    beforeAll(() => {
+      transformedFile = runTransform(program, opts, testFiles[2]);
+    });
+
+    it("should parse params", () => {
+      expect(transformedFile).toMatch(`query: { "name": "Name of car" }`);
+      expect(transformedFile).toMatch(`This should not be overwritten`);
+    });
   });
 });
 

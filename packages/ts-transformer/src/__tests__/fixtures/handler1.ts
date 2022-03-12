@@ -1,4 +1,5 @@
-import { Car, FrusterRequest, FrusterResponse, subscribe } from "./MockTypes";
+import { Car, subscribe } from "./MockTypes";
+import { FrusterRequest, FrusterResponse } from "@fruster/bus";
 
 export class Handler {
   @subscribe({ subject: "foo.bar" })
@@ -7,6 +8,7 @@ export class Handler {
   ): Promise<FrusterResponse<Car>> {
     return {
       reqId: "foo",
+      status: 200,
       data: {
         model: "string",
       },
@@ -19,6 +21,7 @@ export class Handler {
   ): Promise<FrusterResponse<number>> => {
     return {
       reqId: "foo",
+      status: 200,
       data: 1,
     };
   };

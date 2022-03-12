@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/transformers/fruster-transformer.js",
   "scripts": {
-    "test": "jest",
+    "test": "jest --verbose",
     "prepublish": "npm run build",
     "build": "rimraf ./dist && tsc --project tsconfig.dist.json"
   },
@@ -20,6 +20,7 @@
     "uuid": "^8.3.2"
   },
   "devDependencies": {
+    "@fruster/bus": "1.0.0",
     "@types/jest": "^27.4.1",
     "@types/json-schema": "^7.0.9",
     "@types/minimatch": "^3.0.5",
