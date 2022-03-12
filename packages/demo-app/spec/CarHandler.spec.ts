@@ -8,7 +8,7 @@ describe("CarHandler", () => {
   startBeforeAll({
     mockNats: true,
     bus,
-    service: start,
+    service: (conn) => start(conn.natsUrl),
   });
 
   it("should get car", async () => {
