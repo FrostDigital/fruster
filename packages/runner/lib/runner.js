@@ -2,6 +2,7 @@
 const ts = require("typescript");
 const tsNode = require("ts-node").register;
 const path = require("path");
+const { DiagnosticCategory } = require("typescript");
 const frusterTransformer = require("@fruster/ts-transformer").default;
 const tsConfig = require(path.join(process.cwd(), "/tsconfig.json"));
 
@@ -17,6 +18,23 @@ function main(args) {
   );
 
   const program = ts.createProgram(fileNames, options);
+
+  const allDiag = [
+    ...program.getSemanticDiagnostics(),
+    ...program.getGlobalDiagnostics(),
+  ];
+
+  const errors = allDiag.filter((d) => d.category === DiagnosticCategory.Error);
+
+  if (errors.length > 0) {
+    errors.forEach(prettyPrintDiagnostic);
+    console.log();
+    console.error(
+      `💥 fruster-runner aborted compilation due to ${errors.length} error(s)`
+    );
+    console.log();
+    process.exit(1);
+  }
 
   const transformers = {
     before: [
@@ -44,6 +62,21 @@ function main(args) {
   });
 
   require(path.join(process.cwd(), entryFile));
+}
+
+/**
+ *
+ * @param {ts.Diagnostic} diag
+ */
+function prettyPrintDiagnostic(diag) {
+  const msg =
+    typeof diag.messageText === "string"
+      ? diag.messageText
+      : diag.messageText.messageText;
+  const filePath = diag.file.fileName.replace(process.cwd(), ".");
+  console.log();
+  console.log("\x1b[2m" + filePath + "\x1b[0m");
+  console.log(msg);
 }
 
 try {
