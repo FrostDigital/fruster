@@ -144,10 +144,6 @@ export const addSchema = ({
 		schemas = [...schemas, schema];
 	}
 
-	if (!schemas.length) {
-		throw new Error("Should provide either `schemasFromFolder` or `schema` object");
-	}
-
 	for (const schema of schemas) {
 		if (schema.id && !schema.$id) {
 			// Patch schemas that are using old syntax with id instead of $id
