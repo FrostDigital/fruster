@@ -46,4 +46,8 @@ function main(args) {
   require(path.join(process.cwd(), entryFile));
 }
 
-main(process.argv);
+try {
+  main(process.argv);
+} catch (err) {
+  console.error(err);
+}
