@@ -1,7 +1,7 @@
 type Params = { [x: string]: string };
 type Query = { [x: string]: string };
 
-export type MinimalUser = object & { id: string; scopes: string[] };
+export type User = object & { id: string; scopes: string[] };
 
 /**
  * Fruster request model.
@@ -33,7 +33,7 @@ export interface FrusterRequest<T = any, P = Params, Q = Query> {
 	/**
 	 * Logged in user
 	 */
-	user?: MinimalUser;
+	user?: User;
 
 	/**
 	 * Path used for request if request was HTTP
