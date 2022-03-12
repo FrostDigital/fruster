@@ -1,6 +1,6 @@
 {
 	"name": "@fruster/bus",
-	"version": "1.0.0-alpha.8",
+	"version": "1.0.0-alpha.9",
 	"description": "NATS message bus helper for Fruster micro services",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -19,7 +19,7 @@
 	],
 	"license": "MIT",
 	"dependencies": {
-		"@fruster/errors": "^1.0.0-alpha.8",
+		"@fruster/errors": "^1.0.0-alpha.9",
 		"ajv": "^8.10.0",
 		"ajv-formats": "^2.1.1",
 		"fs-extra": "^8.0.1",
