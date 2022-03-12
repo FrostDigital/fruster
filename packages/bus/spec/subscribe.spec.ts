@@ -1,7 +1,7 @@
 import { startNatsServerAndConnectBus, TestConnection } from "./support/test-utils";
 import bus from "../index";
 import { reqId, user } from "../lib/async-context";
-import { MinimalUser } from "../lib/model/FrusterRequest";
+import { User } from "../lib/model/FrusterRequest";
 
 describe("subscribe", function () {
 	let natsConnection: TestConnection;
@@ -224,7 +224,7 @@ describe("subscribe", function () {
 			};
 		});
 
-		bus.request({ subject: subject1, message: { reqId: "1", user: { id: "1" } as MinimalUser } });
-		bus.request({ subject: subject1, message: { reqId: "2", user: { id: "2" } as MinimalUser } });
+		bus.request({ subject: subject1, message: { reqId: "1", user: { id: "1" } as User } });
+		bus.request({ subject: subject1, message: { reqId: "2", user: { id: "2" } as User } });
 	});
 });
