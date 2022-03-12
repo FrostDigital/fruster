@@ -146,12 +146,10 @@ export interface ImmutableFrusterRequest<T = any> extends FrusterRequest<T> {
 }
 
 export interface TestFrusterRequest<T = any>
-	extends Omit<CreateFrusterRequest<T>, "reqId" | "user" | "query" | "params" | "headers" | "transactionId"> {
+	extends Omit<CreateFrusterRequest<T>, "reqId" | "user" | "headers" | "transactionId"> {
 	reqId?: string;
-	query?: { [x: string]: string };
-	params?: { [x: string]: string };
 	headers?: { [x: string]: string };
-	user?: Partial<FrusterRequest["user"]>;
+	user?: Partial<User>;
 }
 
 export interface RequestOptions<T = any> {
