@@ -30,5 +30,8 @@
     "fruster-test-utils": "^0.6.5",
     "jasmine": "^2.4.1",
     "jasmine-spec-reporter": "^2.7.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

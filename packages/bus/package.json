@@ -55,5 +55,8 @@
 			"lib/model/*",
 			"spec"
 		]
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }
