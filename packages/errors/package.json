@@ -1,6 +1,6 @@
 {
 	"name": "@fruster/errors",
-	"version": "1.0.0-alpha.4",
+	"version": "1.0.0-alpha.6",
 	"description": "Simplifies Fruster error handling",
 	"types": "dist/index.d.ts",
 	"main": "dist/index.js",
@@ -13,7 +13,7 @@
 	"author": "Joel Söderström <joel@frostdigital.se>",
 	"license": "MIT",
 	"dependencies": {
-		"@fruster/log": "^1.0.0-alpha.4",
+		"@fruster/log": "^1.0.0-alpha.6",
 		"uuid": "^8.3.2"
 	},
 	"devDependencies": {
