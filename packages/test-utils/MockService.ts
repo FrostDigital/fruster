@@ -1,9 +1,22 @@
-import { TestFrusterRequest, FrusterResponse } from "@fruster/bus";
+import {
+	FrusterError,
+	FrusterResponse,
+	TestFrusterRequest,
+} from "@fruster/bus";
 
 type MockedResponse<T = any> =
-	| FrusterResponse<T>
-	| ((req: TestFrusterRequest<any>) => FrusterResponse<T>);
+	| MockFrusterResponse<T>
+	| ((req: TestFrusterRequest<any>) => MockFrusterResponse<T>);
 
+interface MockFrusterError extends Partial<FrusterError> {
+	code: string;
+}
+interface MockFrusterResponse<T = any>
+	extends Omit<FrusterResponse<T>, "data" | "status" | "error"> {
+	data?: T;
+	status?: number;
+	error?: MockFrusterError;
+}
 export interface MockServiceOpts<T> {
 	/**
 	 * Subject to subscribe to
