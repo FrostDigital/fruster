@@ -1,6 +1,8 @@
 type Params = { [x: string]: string };
 type Query = { [x: string]: string };
 
+export type MinimalUser = object & { id: string; scopes: string[] };
+
 /**
  * Fruster request model.
  *
@@ -31,7 +33,7 @@ export interface FrusterRequest<T = any, P = Params, Q = Query> {
 	/**
 	 * Logged in user
 	 */
-	user?: object & { id: string; scopes: string[] };
+	user?: MinimalUser;
 
 	/**
 	 * Path used for request if request was HTTP
@@ -76,7 +78,8 @@ export interface FrusterRequest<T = any, P = Params, Q = Query> {
 	chunks?: number;
 }
 
-export interface CreateFrusterRequest<T = any> extends Omit<FrusterRequest<T>, "data" | "transactionId"> {
+export interface CreateFrusterRequest<T = any> extends Omit<FrusterRequest<T>, "data" | "reqId" | "transactionId"> {
+	reqId?: string;
 	data?: T;
 	transactionId?: string;
 }

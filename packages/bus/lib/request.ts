@@ -2,6 +2,7 @@ import { Client } from "nats";
 import * as uuid from "uuid";
 import conf from "../conf";
 import constants from "../constants";
+import { reqId } from "./async-context";
 import { FrusterDataMessage } from "./model/FrusterDataMessage";
 import { RequestManyOptions, RequestOptions } from "./model/FrusterRequest";
 import { FrusterErrorResponse, FrusterResponse, ImmutableFrusterResponse } from "./model/FrusterResponse";
@@ -45,6 +46,7 @@ export const request = (client: Client) => {
 function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<FrusterResponse | FrusterResponse[]> {
 	return new Promise(async (resolve, reject) => {
 		reqOptions.message.transactionId = uuid.v4();
+		reqOptions.message.reqId = reqOptions.message.reqId || reqId();
 
 		utils.logOutgoingMessage(reqOptions.subject, reqOptions.message);
 
