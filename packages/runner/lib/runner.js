@@ -74,8 +74,15 @@ function prettyPrintDiagnostic(diag) {
       ? diag.messageText
       : diag.messageText.messageText;
   const filePath = diag.file.fileName.replace(process.cwd(), ".");
+
+  const pos = diag.file
+    ? ts.getLineAndCharacterOfPosition(diag.file, diag.start)
+    : null;
+
   console.log();
-  console.log("\x1b[2m" + filePath + "\x1b[0m");
+  console.log(
+    "\x1b[2m" + filePath + (pos !== null ? ":" + pos.line : "") + "\x1b[0m"
+  );
   console.log(msg);
 }
 
