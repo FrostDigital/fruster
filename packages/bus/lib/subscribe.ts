@@ -76,8 +76,8 @@ export interface SubscribeOptions<ReqData = any> {
 	docs?: {
 		description?: string;
 		query?: { [x: string]: string };
-		params: { [x: string]: string };
-		errors: { [x: string]: string };
+		params?: { [x: string]: string };
+		errors?: { [x: string]: string };
 	};
 
 	/**
