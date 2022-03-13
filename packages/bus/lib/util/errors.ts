@@ -1,4 +1,7 @@
-const errors = [
+import { ErrorModel } from "../errors/ErrorModel";
+import { buildErrors } from "../errors";
+
+const defaultErrors: ErrorModel[] = [
 	{
 		status: 400,
 		code: "BAD_REQUEST",
@@ -37,5 +40,4 @@ const errors = [
 	},
 ];
 
-// @ts-ignore
-module.exports = require("@fruster/errors")(errors);
+export default buildErrors(defaultErrors);

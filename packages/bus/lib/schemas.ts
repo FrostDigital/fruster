@@ -4,8 +4,7 @@ import fs from "fs-extra";
 import path from "path";
 import conf from "../conf";
 import utils, { debugLog, hashSchema } from "./util/utils";
-
-const errors = require("./util/errors");
+import errors from "./util/errors";
 
 // export const schemas = {};
 let parsedSchemas: any = [];
@@ -156,7 +155,7 @@ export const addSchema = ({
 
 		try {
 			if (schema.$id && validator.getSchema(schema.$id)) {
-				debugLog(`Schema ${schema.$id} already exists in schema cache, will not add it again`);
+				debugLog(`Schema ${schema.$id} already exists in schema cache, will not be added again`);
 			} else {
 				if (!schema.$id) {
 					console.error("Missing $id for schema, cannot use it:", JSON.stringify(schema));

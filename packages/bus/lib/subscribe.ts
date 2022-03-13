@@ -6,7 +6,7 @@ import { FrusterResponse } from "./model/FrusterResponse";
 import * as schemas from "./schemas";
 import subscribeCache from "./subscribe-cache";
 import utils, { createRequestDataReplyToSubject, debugLog, ParsedSubject } from "./util/utils";
-const errors = require("./util/errors");
+import errors from "./util/errors";
 import conf from "../conf";
 import constants from "../constants";
 import { publish as publishBuilder, PublishOptions } from "./publish";
@@ -83,7 +83,7 @@ export interface SubscribeOptions<ReqData = any> {
 	/**
 	 * Flag to mark if endpoint is deprecated. Will bubble up to auto generated API docs.
 	 */
-	deprecated?: boolean | string;
+	deprecated?: boolean | string;
 }
 
 export const subscribe = (client: Client) => {

@@ -108,14 +108,18 @@ function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<Fr
 				if (res.dataEncoding === constants.CONTENT_ENCODING_GZIP) {
 					res.data = await utils.decompress(resChunks.length > 0 ? resChunks.join("") : res.data);
 				} else {
-					const error: FrusterErrorResponse = errors.get("INVALID_DATA_ENCODING", res.dataEncoding);
-					error.reqId = reqOptions.message.reqId;
-					error.transactionId = reqOptions.message.reqId;
+					const error = errors.get("INVALID_DATA_ENCODING", res.dataEncoding);
+
+					const apiError: FrusterErrorResponse = {
+						...error,
+						reqId: reqOptions.message.reqId, // TODO: From async local storage?
+						transactionId: reqOptions.message.reqId,
+					};
 
 					if (reqOptions.throwErrors) {
-						addToStringFunctionAndReject(error, reject);
+						addToStringFunctionAndReject(apiError, reject);
 					} else {
-						resolve(error);
+						resolve(apiError);
 					}
 				}
 			}

@@ -8,7 +8,8 @@
 	"scripts": {
 		"test": "nyc --reporter=html --check-coverage --lines 90 ts-node --transpile-only ./spec/support/jasmine-runner.ts",
 		"build": "rimraf ./dist && tsc --project tsconfig.dist.json",
-		"prepublish": "npm run build"
+		"prepublish": "npm run build",
+		"clean": "rimraf ./dist"
 	},
 	"contributors": [
 		"Joel Söderström <joel@frost.se>",
@@ -19,7 +20,6 @@
 	],
 	"license": "MIT",
 	"dependencies": {
-		"@fruster/errors": "^1.0.0-alpha.9",
 		"ajv": "^8.10.0",
 		"ajv-formats": "^2.1.1",
 		"fs-extra": "^8.0.1",
@@ -58,5 +58,6 @@
 	},
 	"publishConfig": {
 		"access": "public"
-	}
+	},
+	"gitHead": "7c359ee220f40917b50ad0e52fd4191e9830d141"
 }

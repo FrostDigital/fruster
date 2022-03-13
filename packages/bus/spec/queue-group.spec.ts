@@ -14,13 +14,8 @@ describe("Queue group", function () {
 		subject = uuid.v4();
 	});
 
-	beforeAll((done) => {
-		startNatsServerAndConnectBus()
-			.then((connection) => {
-				natsConnection = connection;
-				done();
-			})
-			.catch(done.fail);
+	beforeAll(async () => {
+		natsConnection = await startNatsServerAndConnectBus();
 	});
 
 	afterAll(function () {
