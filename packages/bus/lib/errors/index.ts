@@ -24,5 +24,5 @@ export class Errors {
 	}
 }
 
-export default Errors.errors;
+export const errors = Errors.errors;
 export const buildErrors = Errors.buildErrors;
