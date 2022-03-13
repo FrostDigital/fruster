@@ -58,6 +58,13 @@ describe("Before jasmine test convenient method", () => {
 	});
 
 	describe("beforeAll with mongo db", () => {
+		if (!process.env.CI) {
+			console.log(
+				"Skipping test that requires mongodb unless CI=1 is set"
+			);
+			return;
+		}
+
 		let service = new FakeService();
 
 		testUtils.startBeforeAll({

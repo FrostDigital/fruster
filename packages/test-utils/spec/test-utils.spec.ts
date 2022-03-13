@@ -42,7 +42,7 @@ if (!process.env.CI) {
 				});
 		});
 
-		it("should start, stop NATS server, connect fruster bus, connect to mongodb and start a service", (done) => {
+		xit("should start, stop NATS server, connect fruster bus, connect to mongodb and start a service", (done) => {
 			testUtils
 				.start({
 					bus: bus,
