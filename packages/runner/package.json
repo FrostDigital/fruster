@@ -19,7 +19,8 @@
     "url": "git+https://github.com/FrostDigital/fruster.git"
   },
   "scripts": {
-    "test": "echo \"No tests, yet\""
+    "test": "echo \"No tests, yet\"",
+    "clean": "echo \"Nothing to clean\""
   },
   "bugs": {
     "url": "https://github.com/FrostDigital/fruster/issues"
@@ -34,5 +35,6 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "gitHead": "7c359ee220f40917b50ad0e52fd4191e9830d141"
 }

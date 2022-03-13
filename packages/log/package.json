@@ -6,7 +6,8 @@
   "private": false,
   "types": "fruster-log.d.ts",
   "scripts": {
-    "test": "node ./spec/support/jasmine-runner.js"
+    "test": "node ./spec/support/jasmine-runner.js",
+    "clean": "echo \"nothing to clean\""
   },
   "keywords": [
     "fruster"
@@ -33,5 +34,6 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "gitHead": "7c359ee220f40917b50ad0e52fd4191e9830d141"
 }

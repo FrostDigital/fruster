@@ -5,8 +5,9 @@
 	"types": "dist/index.d.ts",
 	"main": "dist/index.js",
 	"scripts": {
-		"prepublish": "tsc",
-		"test": "ts-node --transpile-only ./spec/support/jasmine-runner.ts"
+		"prepublish": "npm run clean && tsc",
+		"test": "ts-node --transpile-only ./spec/support/jasmine-runner.ts",
+		"clean": "rimraf ./dist"
 	},
 	"author": "joel@frostdigital.se",
 	"license": "MIT",
@@ -26,11 +27,13 @@
 		"nats-server-control": "0.0.1",
 		"request": "^2.88.2",
 		"request-promise": "^4.2.5",
+		"rimraf": "^3.0.2",
 		"ts-node": "^10.7.0",
 		"ts-node-dev": "^1.1.8",
 		"typescript": "^4.6.2"
 	},
 	"publishConfig": {
 		"access": "public"
-	}
+	},
+	"gitHead": "7c359ee220f40917b50ad0e52fd4191e9830d141"
 }
