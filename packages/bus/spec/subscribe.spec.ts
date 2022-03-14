@@ -1,5 +1,7 @@
 import { startNatsServerAndConnectBus, TestConnection } from "./support/test-utils";
 import bus from "../index";
+import { reqId, user } from "../lib/async-context";
+import { User } from "../lib/model/FrusterRequest";
 
 describe("subscribe", function () {
 	let natsConnection: TestConnection;
@@ -182,5 +184,47 @@ describe("subscribe", function () {
 		expect(optionsResponse.reqId).toBe("reqId");
 		expect(optionsResponse.transactionId).toBeDefined();
 		expect(optionsResponse.from).toBeDefined();
+	});
+
+	it("should set and get context values for reqId and user", async (done) => {
+		const subject1 = "context-test-1";
+		const subject2 = "context-test-2";
+
+		let count = 0;
+
+		bus.subscribe({ subject: subject1 }, async (req) => {
+			expect(reqId()).toBe(req.reqId);
+			expect(user()).toBeDefined();
+
+			await bus.request({
+				subject: subject2,
+				message: { data: { expectedReqId: reqId(), expectedUserId: user().id }, user: user() },
+			});
+
+			count++;
+
+			if (count === 2) {
+				done();
+			}
+
+			return {
+				status: 200,
+			};
+		});
+
+		bus.subscribe({ subject: subject2 }, (req) => {
+			expect(reqId()).toBeDefined();
+			expect(user()).toBeDefined();
+			expect(reqId()).toBe(req.reqId, "reqId in context should equal reqId in request");
+			expect(reqId()).toBe(req.data.expectedReqId, "reqId in context should equal expectedReqId");
+			expect(req.data.expectedUserId).toBe(user().id);
+
+			return {
+				status: 200,
+			};
+		});
+
+		bus.request({ subject: subject1, message: { reqId: "1", user: { id: "1" } as User } });
+		bus.request({ subject: subject1, message: { reqId: "2", user: { id: "2" } as User } });
 	});
 });

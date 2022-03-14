@@ -1,14 +1,6 @@
-import log from "@fruster/log";
 import { v4 } from "uuid";
-import {
-	BAD_REQUEST,
-	DEFAULT_ERRORS,
-	FORBIDDEN,
-	INTERNAL_SERVER_ERROR,
-	NOT_FOUND,
-	UNAUTHORIZED,
-} from "./constants";
-import { ErrorModel, ApiErrorModel } from "./ErrorModel";
+import { BAD_REQUEST, DEFAULT_ERRORS, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, UNAUTHORIZED } from "./constants";
+import { ErrorModel, ApiErrorModel, ImmutableApiError } from "./ErrorModel";
 
 class FrusterErrors {
 	errors: { [k: string]: ApiErrorModel } = {};
@@ -27,9 +19,7 @@ class FrusterErrors {
 	private buildErrors(errorModels: ErrorModel[]) {
 		// Append default errors to errorModel, if needed to.
 		DEFAULT_ERRORS.forEach((defaultError) => {
-			if (
-				!errorModels.find((error) => error.code === defaultError.code)
-			) {
+			if (!errorModels.find((error) => error.code === defaultError.code)) {
 				errorModels.push(defaultError);
 			}
 		});
@@ -37,12 +27,13 @@ class FrusterErrors {
 		errorModels.forEach((errorModel) => {
 			if (this.errors[errorModel.code]) {
 				const msg = `FATAL: Error ${errorModel.code} already defined, you probably entered a duplicate!`;
-				log.error(msg);
+				console.error(msg);
 				throw msg;
 			}
 
 			this.errors[errorModel.code] = {
 				status: errorModel.status,
+				data: undefined,
 				error: {
 					code: errorModel.code,
 					title: errorModel.title,
@@ -52,17 +43,18 @@ class FrusterErrors {
 		});
 	}
 
-	get(code: string, ...detailParams: any[]) {
+	get(code: string, ...detailParams: any[]): ImmutableApiError {
 		const error = this.errors[code];
 
 		if (!error) {
 			const msg = `FATAL: Error ${code} not defined`;
-			log.error(msg);
+			console.error(msg);
 			throw msg;
 		}
 
 		const err = {
 			status: error.status,
+			data: undefined,
 			error: {
 				...error.error,
 				id: v4(),

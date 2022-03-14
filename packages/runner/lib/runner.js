@@ -2,17 +2,39 @@
 const ts = require("typescript");
 const tsNode = require("ts-node").register;
 const path = require("path");
+const { DiagnosticCategory } = require("typescript");
 const frusterTransformer = require("@fruster/ts-transformer").default;
 const tsConfig = require(path.join(process.cwd(), "/tsconfig.json"));
 
-module.export = main = (args) => {
+/**
+ *
+ * @param {string[]} args
+ */
+function main(args) {
   const { options, fileNames } = ts.parseJsonConfigFileContent(
     tsConfig,
     ts.sys,
-    __dirname
+    process.cwd()
   );
 
   const program = ts.createProgram(fileNames, options);
+
+  const allDiag = [
+    ...program.getSemanticDiagnostics(),
+    ...program.getGlobalDiagnostics(),
+  ];
+
+  const errors = allDiag.filter((d) => d.category === DiagnosticCategory.Error);
+
+  if (errors.length > 0) {
+    errors.forEach(prettyPrintDiagnostic);
+    console.log();
+    console.error(
+      `💥 fruster-runner aborted compilation due to ${errors.length} error(s)`
+    );
+    console.log();
+    process.exit(1);
+  }
 
   const transformers = {
     before: [
@@ -40,6 +62,32 @@ module.export = main = (args) => {
   });
 
   require(path.join(process.cwd(), entryFile));
-};
+}
 
-main(process.argv);
+/**
+ *
+ * @param {ts.Diagnostic} diag
+ */
+function prettyPrintDiagnostic(diag) {
+  const msg =
+    typeof diag.messageText === "string"
+      ? diag.messageText
+      : diag.messageText.messageText;
+  const filePath = diag.file.fileName.replace(process.cwd(), ".");
+
+  const pos = diag.file
+    ? ts.getLineAndCharacterOfPosition(diag.file, diag.start)
+    : null;
+
+  console.log();
+  console.log(
+    "\x1b[2m" + filePath + (pos !== null ? ":" + pos.line : "") + "\x1b[0m"
+  );
+  console.log(msg);
+}
+
+try {
+  main(process.argv);
+} catch (err) {
+  console.error(err);
+}

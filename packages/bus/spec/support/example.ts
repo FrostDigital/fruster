@@ -1,6 +1,6 @@
-import frusterErrors from "..";
+import { buildErrors } from "../../lib/errors/index";
 
-const errors = [
+const exampleErrors = [
 	{
 		status: 400,
 		code: "INVALID_PRESIDENT",
@@ -16,4 +16,4 @@ const errors = [
 	},
 ];
 
-export default frusterErrors(errors);
+export default buildErrors(exampleErrors);

@@ -1,3 +1,5 @@
+// TODO: These might be redundant
+
 /**
  * Model used to define errors.
  */
@@ -13,5 +15,11 @@ export interface ErrorModel {
  */
 export interface ApiErrorModel {
 	status: number;
+	data: any;
 	error: Omit<ErrorModel, "status">;
+}
+
+export interface ImmutableApiError extends Omit<ApiErrorModel, "error"> {
+	error: Omit<ApiErrorModel["error"], "detail"> & { detail?: string; id: string };
+	thrower?: string;
 }

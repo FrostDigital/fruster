@@ -52,10 +52,6 @@ export interface FrusterTestUtilsOptions {
 	 */
 	mockNats?: boolean;
 	/**
-	 * Whether or not to force force response json schema validation.
-	 */
-	forceResponseValidation?: boolean;
-	/**
 	 * Whether or not to use the resulting client as a singleton.
 	 */
 	singleton?: boolean;
@@ -294,7 +290,7 @@ export async function startNatsServer(
  * Stop nats, close fruster bus connection(s) and drop database
  */
 export function stop(
-	connection: FrusterTestUtilsConnection,
+	connection: Partial<FrusterTestUtilsConnection>,
 	options?: FrusterTestUtilsOptions
 ) {
 	if (connection.bus && connection.bus.closeAll) connection.bus.closeAll();
@@ -334,7 +330,7 @@ export function stop(
 
 // Alias for stop
 export function close(
-	connection: FrusterTestUtilsConnection,
+	connection: Partial<FrusterTestUtilsConnection>,
 	options?: FrusterTestUtilsOptions
 ) {
 	return stop(connection, options);

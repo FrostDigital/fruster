@@ -1,6 +1,8 @@
 type Params = { [x: string]: string };
 type Query = { [x: string]: string };
 
+export type User = { id: string; scopes: string[]; [x: string]: any };
+
 /**
  * Fruster request model.
  *
@@ -31,7 +33,7 @@ export interface FrusterRequest<T = any, P = Params, Q = Query> {
 	/**
 	 * Logged in user
 	 */
-	user?: object & { id: string; scopes: string[] };
+	user: User;
 
 	/**
 	 * Path used for request if request was HTTP
@@ -46,17 +48,17 @@ export interface FrusterRequest<T = any, P = Params, Q = Query> {
 	/**
 	 * HTTP query params
 	 */
-	query?: Q;
+	query: Q;
 
 	/**
 	 * HTTP path params
 	 */
-	params?: P;
+	params: P;
 
 	/**
 	 * HTTP headers
 	 */
-	headers?: { [x: string]: string };
+	headers: { [x: string]: string };
 
 	/**
 	 * Optional encoding
@@ -76,9 +78,15 @@ export interface FrusterRequest<T = any, P = Params, Q = Query> {
 	chunks?: number;
 }
 
-export interface CreateFrusterRequest<T = any> extends Omit<FrusterRequest<T>, "data" | "transactionId"> {
+export interface CreateFrusterRequest<T = any>
+	extends Omit<FrusterRequest<T>, "data" | "reqId" | "transactionId" | "params" | "query" | "user" | "headers"> {
+	reqId?: string;
 	data?: T;
 	transactionId?: string;
+	params?: { [x: string]: string };
+	query?: { [x: string]: string };
+	user?: User;
+	headers?: FrusterRequest["headers"];
 }
 
 export interface ImmutableFrusterRequest<T = any> extends FrusterRequest<T> {
@@ -138,12 +146,10 @@ export interface ImmutableFrusterRequest<T = any> extends FrusterRequest<T> {
 }
 
 export interface TestFrusterRequest<T = any>
-	extends Omit<CreateFrusterRequest<T>, "reqId" | "user" | "query" | "params" | "headers" | "transactionId"> {
+	extends Omit<CreateFrusterRequest<T>, "reqId" | "user" | "headers" | "transactionId"> {
 	reqId?: string;
-	query?: { [x: string]: string };
-	params?: { [x: string]: string };
 	headers?: { [x: string]: string };
-	user?: Partial<FrusterRequest["user"]>;
+	user?: Partial<User>;
 }
 
 export interface RequestOptions<T = any> {

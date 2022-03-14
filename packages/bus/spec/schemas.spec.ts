@@ -2,7 +2,7 @@ import * as schemas from "../lib/schemas";
 
 describe("Schemas", () => {
 	beforeEach(() => {
-		schemas.init("spec/support/test-schemas", undefined, false);
+		schemas.init("spec/support/test-schemas", false);
 	});
 
 	it("should init with schemas in given dir", () => {

@@ -3,6 +3,9 @@ import { FrusterBus } from "./lib/FrusterBus";
 import pjson from "./package.json";
 export * from "./lib/model/FrusterRequest";
 export * from "./lib/model/FrusterResponse";
+export * from "./lib/model/FrusterError";
+export * from "./lib/errors";
+
 export type { SubscribeOptions } from "./lib/subscribe";
 
 export type { FrusterBus } from "./lib/FrusterBus";

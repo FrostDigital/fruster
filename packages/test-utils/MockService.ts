@@ -1,9 +1,22 @@
-import { TestFrusterRequest, FrusterResponse } from "@fruster/bus";
+import {
+	FrusterError,
+	FrusterResponse,
+	TestFrusterRequest,
+} from "@fruster/bus";
 
 type MockedResponse<T = any> =
-	| FrusterResponse<T>
-	| ((req: TestFrusterRequest<any>) => FrusterResponse<T>);
+	| MockFrusterResponse<T>
+	| ((req: TestFrusterRequest<any>) => MockFrusterResponse<T>);
 
+interface MockFrusterError extends Partial<FrusterError> {
+	code: string;
+}
+interface MockFrusterResponse<T = any>
+	extends Omit<FrusterResponse<T>, "data" | "status" | "error"> {
+	data?: T;
+	status?: number;
+	error?: MockFrusterError;
+}
 export interface MockServiceOpts<T> {
 	/**
 	 * Subject to subscribe to
@@ -85,6 +98,10 @@ class MockService<T> {
 			response = this.responses[reqIndex];
 
 			if (!response) {
+				console.warn(
+					`Missing mock response for subject '${this.subject}', request was:`,
+					req
+				);
 				return {
 					status: 500,
 					error: {

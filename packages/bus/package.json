@@ -1,14 +1,15 @@
 {
 	"name": "@fruster/bus",
-	"version": "1.0.0-alpha.1",
+	"version": "1.0.0-alpha.10",
 	"description": "NATS message bus helper for Fruster micro services",
-	"main": "index.js",
+	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"private": false,
 	"scripts": {
 		"test": "nyc --reporter=html --check-coverage --lines 90 ts-node --transpile-only ./spec/support/jasmine-runner.ts",
 		"build": "rimraf ./dist && tsc --project tsconfig.dist.json",
-		"prepublish": "npm run build"
+		"prepublish": "npm run build",
+		"clean": "rimraf ./dist"
 	},
 	"contributors": [
 		"Joel Söderström <joel@frost.se>",
@@ -21,7 +22,6 @@
 	"dependencies": {
 		"ajv": "^8.10.0",
 		"ajv-formats": "^2.1.1",
-		"fruster-errors": "^0.1.2",
 		"fs-extra": "^8.0.1",
 		"lodash": "^4.17.11",
 		"mock-nats-client": "^0.2.0",
@@ -58,5 +58,6 @@
 	},
 	"publishConfig": {
 		"access": "public"
-	}
+	},
+	"gitHead": "7c359ee220f40917b50ad0e52fd4191e9830d141"
 }

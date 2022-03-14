@@ -6,11 +6,12 @@ import { FrusterResponse } from "./model/FrusterResponse";
 import * as schemas from "./schemas";
 import subscribeCache from "./subscribe-cache";
 import utils, { createRequestDataReplyToSubject, debugLog, ParsedSubject } from "./util/utils";
-const errors = require("./util/errors");
+import errors from "./util/errors";
 import conf from "../conf";
 import constants from "../constants";
 import { publish as publishBuilder, PublishOptions } from "./publish";
 import { FrusterDataMessage } from "./model/FrusterDataMessage";
+import { asyncStorage, setReqId, setUser } from "./async-context";
 
 const WILDCARD_REGEX = /\*/g;
 
@@ -75,14 +76,14 @@ export interface SubscribeOptions<ReqData = any> {
 	docs?: {
 		description?: string;
 		query?: { [x: string]: string };
-		params: { [x: string]: string };
-		errors: { [x: string]: string };
+		params?: { [x: string]: string };
+		errors?: { [x: string]: string };
 	};
 
 	/**
 	 * Flag to mark if endpoint is deprecated. Will bubble up to auto generated API docs.
 	 */
-	deprecated?: boolean;
+	deprecated?: boolean | string;
 }
 
 export const subscribe = (client: Client) => {
@@ -257,96 +258,104 @@ export class Subscribe {
 	 * @param {String} actualSubject
 	 */
 	private async handleMessage(jsonMsg: FrusterRequest, replyTo: string, actualSubject: string): Promise<any> {
-		const startTime = Date.now();
+		return asyncStorage.run(new Map(), async () => {
+			setReqId(jsonMsg.reqId);
+			setUser(jsonMsg.user);
 
-		if (jsonMsg.chunks) {
-			// Request is chunked, make sure to get those before proceeding
-			jsonMsg.data = await this.getRequestDataChunks(jsonMsg, replyTo);
-		}
+			const startTime = Date.now();
 
-		if (this.childSubscribes) {
-			const childSub = this.getMatchingChildSubscribe(actualSubject);
-
-			if (childSub) {
-				return childSub.handleMessage(jsonMsg, replyTo, actualSubject);
-			}
-		}
-
-		if (jsonMsg.dataEncoding) {
-			try {
-				jsonMsg.data = await this.decompress(jsonMsg);
-			} catch (err) {
-				console.log("Failed decompressing", err);
-				this.handleError(err, jsonMsg, replyTo);
-				return;
-			}
-		}
-
-		if (!this.validateRequest(jsonMsg, replyTo)) {
-			return;
-		}
-
-		utils.logIncomingMessage(this.options.subject, jsonMsg);
-
-		const isAuthenticated = isAuthorizedForCall(
-			this.options.permissions,
-			this.options.mustBeLoggedIn,
-			!!jsonMsg.user ? jsonMsg.user.scopes : []
-		);
-
-		if (!isAuthenticated) return publish({ subject: replyTo, message: this.notAuthorizedResponse() });
-
-		const hasPermission = hasPermissionForCall(this.options.permissions, !!jsonMsg.user ? jsonMsg.user.scopes : []);
-
-		if (hasPermission) {
-			const params = utils.parseParams(this.options.subject, actualSubject);
-
-			if (params) {
-				if (jsonMsg.params) jsonMsg.params = Object.assign(params, jsonMsg.params);
-				else jsonMsg.params = params;
+			if (jsonMsg.chunks) {
+				// Request is chunked, make sure to get those before proceeding
+				jsonMsg.data = await this.getRequestDataChunks(jsonMsg, replyTo);
 			}
 
-			let response: ReturnType<HandleFn>;
+			if (this.childSubscribes) {
+				const childSub = this.getMatchingChildSubscribe(actualSubject);
 
-			try {
-				jsonMsg.query = jsonMsg.query || {};
-				jsonMsg.headers = jsonMsg.headers || {};
-				jsonMsg.params = jsonMsg.params || {};
-
-				response = this.handleFunction(jsonMsg as ImmutableFrusterRequest, replyTo, actualSubject);
-			} catch (err) {
-				this.handleError(err, jsonMsg, replyTo);
-				return;
-			}
-
-			if (response && replyTo) {
-				if (isPromise(response)) {
-					(response as Promise<FrusterResponse>)
-						.then((resolvedResponse: FrusterResponse) => {
-							if (utils.isError(resolvedResponse)) {
-								// TODO: Use handle error here instead?
-								throw resolvedResponse;
-							}
-
-							resolvedResponse.reqId = jsonMsg.reqId;
-							resolvedResponse.transactionId = jsonMsg.transactionId;
-							resolvedResponse.ms = Date.now() - startTime;
-
-							return this.publishResponse(resolvedResponse, replyTo, jsonMsg.dataSubject);
-						})
-						.catch((err: any) => this.handleError(err, jsonMsg, replyTo));
-				} else {
-					response = response as FrusterResponse;
-					response.transactionId = jsonMsg.transactionId;
-					response.reqId = jsonMsg.reqId;
-					response.ms = Date.now() - startTime;
-
-					await this.publishResponse(response as FrusterResponse, replyTo, jsonMsg.dataSubject);
+				if (childSub) {
+					return childSub.handleMessage(jsonMsg, replyTo, actualSubject);
 				}
 			}
-		} else {
-			publish({ subject: replyTo, message: this.forbiddenResponse() });
-		}
+
+			if (jsonMsg.dataEncoding) {
+				try {
+					jsonMsg.data = await this.decompress(jsonMsg);
+				} catch (err) {
+					console.log("Failed decompressing", err);
+					this.handleError(err, jsonMsg, replyTo);
+					return;
+				}
+			}
+
+			if (!this.validateRequest(jsonMsg, replyTo)) {
+				return;
+			}
+
+			utils.logIncomingMessage(this.options.subject, jsonMsg);
+
+			const isAuthenticated = isAuthorizedForCall(
+				this.options.permissions,
+				this.options.mustBeLoggedIn,
+				!!jsonMsg.user ? jsonMsg.user.scopes : []
+			);
+
+			if (!isAuthenticated) return publish({ subject: replyTo, message: this.notAuthorizedResponse() });
+
+			const hasPermission = hasPermissionForCall(
+				this.options.permissions,
+				!!jsonMsg.user ? jsonMsg.user.scopes : []
+			);
+
+			if (hasPermission) {
+				const params = utils.parseParams(this.options.subject, actualSubject);
+
+				if (params) {
+					if (jsonMsg.params) jsonMsg.params = Object.assign(params, jsonMsg.params);
+					else jsonMsg.params = params;
+				}
+
+				let response: ReturnType<HandleFn>;
+
+				try {
+					jsonMsg.query = jsonMsg.query || {};
+					jsonMsg.headers = jsonMsg.headers || {};
+					jsonMsg.params = jsonMsg.params || {};
+
+					response = this.handleFunction(jsonMsg as ImmutableFrusterRequest, replyTo, actualSubject);
+				} catch (err) {
+					this.handleError(err, jsonMsg, replyTo);
+					return;
+				}
+
+				if (response && replyTo) {
+					if (isPromise(response)) {
+						(response as Promise<FrusterResponse>)
+							.then((resolvedResponse: FrusterResponse) => {
+								if (utils.isError(resolvedResponse)) {
+									// TODO: Use handle error here instead?
+									throw resolvedResponse;
+								}
+
+								resolvedResponse.reqId = jsonMsg.reqId;
+								resolvedResponse.transactionId = jsonMsg.transactionId;
+								resolvedResponse.ms = Date.now() - startTime;
+
+								return this.publishResponse(resolvedResponse, replyTo, jsonMsg.dataSubject);
+							})
+							.catch((err: any) => this.handleError(err, jsonMsg, replyTo));
+					} else {
+						response = response as FrusterResponse;
+						response.transactionId = jsonMsg.transactionId;
+						response.reqId = jsonMsg.reqId;
+						response.ms = Date.now() - startTime;
+
+						await this.publishResponse(response as FrusterResponse, replyTo, jsonMsg.dataSubject);
+					}
+				}
+			} else {
+				publish({ subject: replyTo, message: this.forbiddenResponse() });
+			}
+		});
 	}
 
 	private getMatchingChildSubscribe(incomingSubject: string) {

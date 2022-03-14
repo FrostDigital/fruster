@@ -2,6 +2,7 @@ import { Client } from "nats";
 import * as uuid from "uuid";
 import conf from "../conf";
 import constants from "../constants";
+import { reqId } from "./async-context";
 import { FrusterDataMessage } from "./model/FrusterDataMessage";
 import { RequestManyOptions, RequestOptions } from "./model/FrusterRequest";
 import { FrusterErrorResponse, FrusterResponse, ImmutableFrusterResponse } from "./model/FrusterResponse";
@@ -45,6 +46,7 @@ export const request = (client: Client) => {
 function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<FrusterResponse | FrusterResponse[]> {
 	return new Promise(async (resolve, reject) => {
 		reqOptions.message.transactionId = uuid.v4();
+		reqOptions.message.reqId = reqOptions.message.reqId || reqId();
 
 		utils.logOutgoingMessage(reqOptions.subject, reqOptions.message);
 
@@ -106,14 +108,18 @@ function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<Fr
 				if (res.dataEncoding === constants.CONTENT_ENCODING_GZIP) {
 					res.data = await utils.decompress(resChunks.length > 0 ? resChunks.join("") : res.data);
 				} else {
-					const error: FrusterErrorResponse = errors.get("INVALID_DATA_ENCODING", res.dataEncoding);
-					error.reqId = reqOptions.message.reqId;
-					error.transactionId = reqOptions.message.reqId;
+					const error = errors.get("INVALID_DATA_ENCODING", res.dataEncoding);
+
+					const apiError: FrusterErrorResponse = {
+						...error,
+						reqId: reqOptions.message.reqId, // TODO: From async local storage?
+						transactionId: reqOptions.message.reqId,
+					};
 
 					if (reqOptions.throwErrors) {
-						addToStringFunctionAndReject(error, reject);
+						addToStringFunctionAndReject(apiError, reject);
 					} else {
-						resolve(error);
+						resolve(apiError);
 					}
 				}
 			}

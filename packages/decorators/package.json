@@ -1,6 +1,6 @@
 {
 	"name": "@fruster/decorators",
-	"version": "1.0.0-alpha.1",
+	"version": "1.0.0-alpha.10",
 	"main": "dist/index.js",
 	"module": "dist/index.js",
 	"publishConfig": {
@@ -13,17 +13,20 @@
 	],
 	"scripts": {
 		"build": "tsc",
-		"prepublish": "npm run build"
+		"prepublish": "npm run build",
+		"clean": "rimraf ./dist"
 	},
 	"types": "dist/index.d.ts",
 	"dependencies": {
 		"uuid": "^8.3.2"
 	},
 	"devDependencies": {
-		"@fruster/bus": "^1.0.0-alpha.1",
+		"@fruster/bus": "^1.0.0-alpha.10",
 		"@types/node": "14.0.27",
+		"rimraf": "^3.0.2",
 		"ts-node": "^10.7.0",
 		"ts-node-dev": "^1.0.0-pre.43",
 		"typescript": "^4.6.2"
-	}
+	},
+	"gitHead": "7c359ee220f40917b50ad0e52fd4191e9830d141"
 }
