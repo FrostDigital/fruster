@@ -30,7 +30,6 @@ export default function frusterTransformerPlugin(
   debugLog("Starting fruster-transformer");
 
   return (ctx: ts.TransformationContext) => {
-    const printer = ts.createPrinter();
     return (sourceFile: ts.SourceFile) => {
       if (!minimatch(sourceFile.fileName, options?.handlerPath || "**/*.ts")) {
         return sourceFile;
