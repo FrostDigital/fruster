@@ -98,6 +98,10 @@ class MockService<T> {
 			response = this.responses[reqIndex];
 
 			if (!response) {
+				console.warn(
+					`Missing mock response for subject '${this.subject}', request was:`,
+					req
+				);
 				return {
 					status: 500,
 					error: {
