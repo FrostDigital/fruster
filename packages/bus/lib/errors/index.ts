@@ -13,7 +13,14 @@ export const errors = new FrusterErrors([]);
  * `404 NOT_FOUND`
  * `500 INTERNAL_SERVER_ERROR`
  */
-export function buildErrors(errorsModels: ErrorModel[]) {
+export function buildErrors(errorsModels: ErrorModel[], newInstance?: boolean) {
+	if (newInstance) {
+		return new FrusterErrors(errorsModels);
+	}
 	errors.addErrors(errorsModels);
 	return errors;
+}
+
+export function reset() {
+	errors.reset();
 }

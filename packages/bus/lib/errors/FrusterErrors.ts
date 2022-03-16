@@ -86,6 +86,17 @@ class FrusterErrors {
 	}
 
 	/**
+	 * Resets any previously added custom errors.
+	 * Will revert back to only default errors.
+	 *
+	 * Probably only useful when writing tests.
+	 */
+	reset() {
+		this.errors = {};
+		this.buildErrors([]);
+	}
+
+	/**
 	 * BAD_REQUEST error.
 	 *
 	 * @param {Array=} detail
