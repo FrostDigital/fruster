@@ -3,5 +3,9 @@
   "private": true,
   "devDependencies": {
     "lerna": "^4.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FrostDigital/fruster.git"
   }
 }
