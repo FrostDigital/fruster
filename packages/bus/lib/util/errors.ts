@@ -1,13 +1,7 @@
 import { ErrorModel } from "../errors/ErrorModel";
 import { buildErrors } from "../errors";
 
-const defaultErrors: ErrorModel[] = [
-	{
-		status: 400,
-		code: "BAD_REQUEST",
-		title: "Request has missing or invalid fields",
-		detail: (errorText) => `${errorText}`,
-	},
+export const busDefaultErrors: ErrorModel[] = [
 	{
 		status: 500,
 		code: "BAD_RESPONSE",
@@ -40,4 +34,4 @@ const defaultErrors: ErrorModel[] = [
 	},
 ];
 
-export default buildErrors(defaultErrors);
+export default buildErrors(busDefaultErrors, true);

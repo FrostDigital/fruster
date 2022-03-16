@@ -1,37 +1,41 @@
-import exampleErrors from "./support/example";
-import { buildErrors } from "../lib/errors";
+import { errors, buildErrors, reset } from "../lib/errors";
 import { ErrorModel } from "../lib/errors/ErrorModel";
 
 describe("Fruster error", () => {
+	beforeEach(() => {
+		reset();
+		buildErrors(exampleErrors);
+	});
+
 	it("should create errors", () => {
-		const error = exampleErrors.get("INVALID_PRESIDENT", "Bernie", "Trump");
+		const error = errors.get("INVALID_PRESIDENT", "Bernie", "Trump");
 
 		expect(error.status).toBe(400);
 		expect(error.error.code).toBe("INVALID_PRESIDENT");
 		expect(error.error.title).toBe("This is wrong");
 		expect(error.error.detail).toBe("I was hoping for Bernie, but Trump was elected");
 
-		const oError = exampleErrors.get("INVALID_PRESIDENT", "Hillary", "Trump");
+		const oError = errors.get("INVALID_PRESIDENT", "Hillary", "Trump");
 
 		expect(oError.error.detail).toBe("I was hoping for Hillary, but Trump was elected");
 		expect(oError.error.id).not.toBe(error.error.id);
 	});
 
 	it("should not fail to create details even though not all args was passed in", () => {
-		const error = exampleErrors.get("INVALID_PRESIDENT", "Bernie");
+		const error = errors.get("INVALID_PRESIDENT", "Bernie");
 		expect(error.error.detail).toBe("I was hoping for Bernie, but undefined was elected");
 	});
 
 	it("should fail to get error that does not exist", () => {
 		try {
-			exampleErrors.get("POOP");
+			errors.get("POOP");
 		} catch (e) {
 			expect(e).toMatch("not defined");
 		}
 	});
 
 	it("should return stringified object from toString", () => {
-		const error = exampleErrors.badRequest();
+		const error = errors.badRequest();
 		expect(error.toString()).toBe(
 			`{"status":400,"error":{"code":"BAD_REQUEST","title":"Bad request","detail":"","id":"${error.error.id}"}}`
 		);
@@ -61,25 +65,25 @@ describe("Fruster error", () => {
 
 	it("should pass detail params as varargs", (done) => {
 		// get
-		const gottenError = exampleErrors.get("INVALID_PRESIDENT", "Bernie", "Trump");
+		const gottenError = errors.get("INVALID_PRESIDENT", "Bernie", "Trump");
 		expect(gottenError.error.detail).toBe("I was hoping for Bernie, but Trump was elected");
 
 		// reject
-		exampleErrors.reject("INVALID_PRESIDENT", "Hillary", "Trump").catch((rejectedError) => {
+		errors.reject("INVALID_PRESIDENT", "Hillary", "Trump").catch((rejectedError) => {
 			expect(rejectedError.error.detail).toBe("I was hoping for Hillary, but Trump was elected");
 			done();
 		});
 	});
 
 	it("should have added default errors that does not already exist in error model", () => {
-		expect(Object.keys(exampleErrors.errors).length).toBe(6);
-		expect(exampleErrors.internalServerError().error.title).toBe("Something broke");
+		expect(Object.keys(errors.errors).length).toBe(6);
+		expect(errors.internalServerError().error.title).toBe("Something broke");
 	});
 
 	it("should create default errors", () => {
 		const errors = buildErrors([]);
 
-		expect(Object.keys(errors.errors).length).toBe(5);
+		expect(Object.keys(errors.errors).length).toBe(6);
 
 		const badRequest = errors.badRequest("details");
 		expect(badRequest.status).toBe(400);
@@ -108,7 +112,23 @@ describe("Fruster error", () => {
 		const internalServerError = errors.internalServerError("details");
 		expect(internalServerError.status).toBe(500);
 		expect(internalServerError.error.code).toBe("INTERNAL_SERVER_ERROR");
-		expect(internalServerError.error.title).toBe("Server encountered an unexpected error");
+		expect(internalServerError.error.title).toBe("Something broke");
 		expect(internalServerError.error.detail).toBe("details");
 	});
 });
+
+const exampleErrors = [
+	{
+		status: 400,
+		code: "INVALID_PRESIDENT",
+		title: "This is wrong",
+		detail: (president: string, actualPresident: string) =>
+			`I was hoping for ${president}, but ${actualPresident} was elected`,
+	},
+
+	{
+		status: 500,
+		code: "INTERNAL_SERVER_ERROR",
+		title: "Something broke",
+	},
+];
