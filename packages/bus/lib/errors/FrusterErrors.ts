@@ -9,23 +9,9 @@ class FrusterErrors {
 		this.buildErrors(errorModels);
 	}
 
-	/**
-	 * Build errors based on error model.
-	 *
-	 * Will add default errors BAD_REQUEST, NOT_FOUND, UNAUTHORIZED,
-	 * FORBIDDEN and INTERNAL_SERVER_ERROR if those are not provided.
-	 *
-	 */
-	private buildErrors(errorModels: ErrorModel[]) {
-		// Append default errors to errorModel, if needed to.
-		DEFAULT_ERRORS.forEach((defaultError) => {
-			if (!errorModels.find((error) => error.code === defaultError.code)) {
-				errorModels.push(defaultError);
-			}
-		});
-
+	addErrors(errorModels: ErrorModel[], failDups = false) {
 		errorModels.forEach((errorModel) => {
-			if (this.errors[errorModel.code]) {
+			if (failDups && this.errors[errorModel.code]) {
 				const msg = `FATAL: Error ${errorModel.code} already defined, you probably entered a duplicate!`;
 				console.error(msg);
 				throw msg;
@@ -41,6 +27,24 @@ class FrusterErrors {
 				},
 			};
 		});
+	}
+
+	/**
+	 * Build errors based on error model.
+	 *
+	 * Will add default errors BAD_REQUEST, NOT_FOUND, UNAUTHORIZED,
+	 * FORBIDDEN and INTERNAL_SERVER_ERROR if those are not provided.
+	 *
+	 */
+	private buildErrors(errorModels: ErrorModel[]) {
+		// Append default errors to errorModel, if needed to.
+		DEFAULT_ERRORS.forEach((defaultError) => {
+			if (!errorModels.find((error) => error.code === defaultError.code)) {
+				errorModels.push(defaultError);
+			}
+		});
+
+		this.addErrors(errorModels, true);
 	}
 
 	get(code: string, ...detailParams: any[]): ImmutableApiError {
