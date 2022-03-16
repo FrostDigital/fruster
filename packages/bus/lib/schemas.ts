@@ -67,7 +67,23 @@ export const validate = (schemaId: string, objectToValidate: any, isRequest = tr
 
 	if (!valid) {
 		if (isRequest) throw errors.get("BAD_REQUEST", getErrorMessage(validator));
-		else throw errors.get("BAD_RESPONSE", getErrorMessage(validator));
+		else {
+			const errMsg = getErrorMessage(validator);
+			console.log("------------- BAD RESPONSE -------------");
+			console.log(errMsg);
+			console.log(
+				"Schema\n",
+				JSON.stringify(
+					parsedSchemas.find((s: any) => s.$id === schemaId),
+					null,
+					2
+				)
+			);
+			console.log();
+			console.log("Data\n", JSON.stringify(objectToValidate, null, 2));
+			console.log("-----------------------------------------");
+			throw errors.get("BAD_RESPONSE", errMsg);
+		}
 	}
 
 	return true;
