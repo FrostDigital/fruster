@@ -46,7 +46,11 @@ export const request = (client: Client) => {
 function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<FrusterResponse | FrusterResponse[]> {
 	return new Promise(async (resolve, reject) => {
 		reqOptions.message.transactionId = uuid.v4();
-		reqOptions.message.reqId = reqOptions.message.reqId || reqId();
+
+		// a) If explicitly set reqId - use that one
+		// b) Get from async context
+		// c) Generate new one
+		reqOptions.message.reqId = reqOptions.message.reqId || reqId() || uuid.v4();
 
 		utils.logOutgoingMessage(reqOptions.subject, reqOptions.message);
 

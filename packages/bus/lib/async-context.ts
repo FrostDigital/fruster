@@ -6,17 +6,25 @@ const CONTEXT_KEY_USER = "user";
 export const asyncStorage = new AsyncLocalStorage<Map<string, any>>();
 
 export function reqId() {
-	return asyncStorage.getStore()!.get(CONTEXT_KEY_REQ_ID);
+	const store = asyncStorage.getStore();
+	return store ? store.get(CONTEXT_KEY_REQ_ID) : undefined;
 }
 
 export function user() {
-	return asyncStorage.getStore()!.get(CONTEXT_KEY_USER);
+	const store = asyncStorage.getStore();
+	return store ? store.get(CONTEXT_KEY_USER) : undefined;
 }
 
 export function setReqId(reqId: string) {
-	asyncStorage.getStore()!.set(CONTEXT_KEY_REQ_ID, reqId);
+	const store = asyncStorage.getStore();
+	if (store) {
+		store.set(CONTEXT_KEY_REQ_ID, reqId);
+	}
 }
 
 export function setUser(user: any) {
-	asyncStorage.getStore()!.set(CONTEXT_KEY_USER, user);
+	const store = asyncStorage.getStore();
+	if (store) {
+		store.set(CONTEXT_KEY_USER, user);
+	}
 }
