@@ -1,6 +1,6 @@
 {
 	"name": "@fruster/test-utils",
-	"version": "1.0.0-alpha.12",
+	"version": "1.0.0-alpha.13",
 	"types": "dist/index.d.ts",
 	"main": "dist/index.js",
 	"scripts": {
@@ -10,7 +10,7 @@
 		"clean": "rimraf ./dist"
 	},
 	"dependencies": {
-		"@fruster/bus": "^1.0.0-alpha.12",
+		"@fruster/bus": "^1.0.0-alpha.13",
 		"get-port": "^5.1.1",
 		"jasmine": "^3.7.0",
 		"jasmine-spec-reporter": "^7.0.0",

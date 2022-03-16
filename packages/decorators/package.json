@@ -1,6 +1,6 @@
 {
 	"name": "@fruster/decorators",
-	"version": "1.0.0-alpha.12",
+	"version": "1.0.0-alpha.13",
 	"main": "dist/index.js",
 	"module": "dist/index.js",
 	"publishConfig": {
@@ -21,7 +21,7 @@
 		"uuid": "^8.3.2"
 	},
 	"devDependencies": {
-		"@fruster/bus": "^1.0.0-alpha.12",
+		"@fruster/bus": "^1.0.0-alpha.13",
 		"@types/node": "14.0.27",
 		"rimraf": "^3.0.2",
 		"ts-node": "^10.7.0",
