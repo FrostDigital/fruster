@@ -14,7 +14,7 @@
 		"get-port": "^5.1.1",
 		"jasmine": "^3.7.0",
 		"jasmine-spec-reporter": "^7.0.0",
-		"mongodb": "2.2.36",
+		"mongodb": "3.1.13",
 		"nats-server-control": "0.0.1",
 		"uuid": "^8.3.2"
 	},
