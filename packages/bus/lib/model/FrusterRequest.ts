@@ -159,7 +159,7 @@ export interface RequestOptions<T = any> {
 	throwErrors?: boolean;
 }
 
-export interface RequestManyOptions extends RequestOptions {
+export interface RequestManyOptions<T = any> extends RequestOptions<T> {
 	maxResponses?: number;
 }
 

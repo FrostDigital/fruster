@@ -80,7 +80,9 @@ export class FrusterBus {
 		throw new Error("There are no connected client(s)");
 	}
 
-	requestMany(options: RequestManyOptions): Promise<FrusterResponse[]> {
+	requestMany<ReqData = any, ResData = any>(
+		options: RequestManyOptions<ReqData>
+	): Promise<ImmutableFrusterResponse<ResData>[]> {
 		// Note: Method is set when client is connected
 		throw new Error("There are no connected client(s)");
 	}

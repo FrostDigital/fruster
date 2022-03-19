@@ -27,11 +27,11 @@ export const request = (client: Client) => {
 
 			return res as ImmutableFrusterResponse<ResData>;
 		},
-		requestMany: async (options: RequestManyOptions) => {
+		requestMany: async <ReqData = any, ResData = any>(options: RequestManyOptions<ReqData>) => {
 			if (!options.maxResponses) options.maxResponses = 10;
 			options.throwErrors = options.throwErrors === undefined ? true : options.throwErrors;
 			const responses = await busRequest(options);
-			return Array.isArray(responses) ? responses : [responses];
+			return (Array.isArray(responses) ? responses : [responses]) as ImmutableFrusterResponse<ResData>[];
 		},
 	};
 };
