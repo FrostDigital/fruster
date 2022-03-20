@@ -75,7 +75,7 @@ export interface ImmutableFrusterResponse<T = any> extends FrusterResponse<T> {
 	 */
 	from: Readonly<{
 		service: string;
-		instanceId: String;
+		instanceId: string;
 	}>;
 
 	/**
