@@ -1,6 +1,6 @@
 {
   "name": "demo-app",
-  "version": "1.0.0-alpha.14",
+  "version": "1.0.0-alpha.15",
   "description": "Demo app for fruster micro services",
   "private": true,
   "homepage": "https://github.com/FrostDigital/fruster#readme",
@@ -16,16 +16,16 @@
     "dev": "nodemon --exec \"fruster-runner ./app.ts\""
   },
   "dependencies": {
-    "@fruster/bus": "^1.0.0-alpha.14",
-    "@fruster/decorators": "^1.0.0-alpha.14",
-    "@fruster/health": "^1.0.0-alpha.14",
-    "@fruster/log": "^1.0.0-alpha.14",
-    "@fruster/runner": "^1.0.0-alpha.14",
+    "@fruster/bus": "^1.0.0-alpha.15",
+    "@fruster/decorators": "^1.0.0-alpha.15",
+    "@fruster/health": "^1.0.0-alpha.15",
+    "@fruster/log": "^1.0.0-alpha.15",
+    "@fruster/runner": "^1.0.0-alpha.15",
     "@types/uuid": "^8.3.4",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
-    "@fruster/test-utils": "^1.0.0-alpha.14",
+    "@fruster/test-utils": "^1.0.0-alpha.15",
     "@types/jasmine": "^3.10.3",
     "@types/node": "^17.0.21",
     "jasmine": "^4.0.2",
