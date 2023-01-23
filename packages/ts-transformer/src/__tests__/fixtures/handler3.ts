@@ -31,6 +31,16 @@ export class Handler {
     };
   }
 
+  @subscribe({ subject: "http.get.car.:id" })
+  async handleWithParamAndQuery(
+    req: FrusterRequest<any, { id: string }, { foo?: string }>
+  ): Promise<FrusterResponse<any>> {
+    return {
+      status: 200,
+      data: "Hello world",
+    };
+  }
+
   @subscribe({
     subject: "http.get.car.:id",
     docs: {
