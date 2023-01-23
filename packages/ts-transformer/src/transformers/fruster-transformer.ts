@@ -158,9 +158,14 @@ function parseHandler(
       }
 
       if (queryDoc) {
-        const queryProp = docsProperties.find(
-          (p) => p?.name.getText() === "query"
-        );
+        const queryProp = docsProperties.find((p) => {
+          // XXX: Not sure why error is thrown here, but it is
+          try {
+            return p?.name?.getText() === "query";
+          } catch (err) {
+            return false;
+          }
+        });
 
         if (queryProp) {
           debugLog(
@@ -177,9 +182,14 @@ function parseHandler(
       }
 
       if (paramsDoc) {
-        const paramsProp = docsProperties.find(
-          (p) => p?.name.getText() === "params"
-        );
+        const paramsProp = docsProperties.find((p) => {
+          try {
+            // XXX: Not sure why error is thrown here, but it is
+            return p?.name.getText() === "params";
+          } catch (err) {
+            return false;
+          }
+        });
 
         if (paramsProp) {
           debugLog(

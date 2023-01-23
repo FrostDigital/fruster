@@ -38,7 +38,7 @@ export function findFirstNestedChildOfKind(
     }
 
     if (c.getChildCount()) {
-      return findFirstNestedChildOfKind(c, kind);
+      return findFirstNestedChildOfKind(c, kind, additionalQuery);
     }
     return undefined;
   });
