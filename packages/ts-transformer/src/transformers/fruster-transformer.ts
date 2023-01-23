@@ -319,7 +319,6 @@ function parseHandler(
 
       if (paramsTypeNode) {
         paramsDoc = getQueryOrParamDocs(checker, paramsTypeNode);
-        console.log("Got paramsDoc", !!paramsDoc, typeof paramsDoc, paramsDoc);
       }
 
       if (queryTypeNode) {
