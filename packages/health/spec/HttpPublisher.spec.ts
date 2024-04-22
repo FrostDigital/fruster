@@ -1,12 +1,11 @@
 import HttpPublisher from "../lib/publishers/HttpPublisher";
-
-const rp = require("request-promise");
+import axios from "axios";
 
 describe("HttpPublisher", () => {
 	const port = 3333;
 
 	describe("when creating its own HTTP server", () => {
-		let publisher;
+		let publisher: HttpPublisher;
 
 		beforeAll(() => {
 			publisher = new HttpPublisher({
@@ -18,25 +17,35 @@ describe("HttpPublisher", () => {
 			publisher.stop();
 		});
 
-		it("should pass health check", (done) => {
+		it("should pass health check", async (done) => {
 			publisher.publishSuccess({
 				healthy: true,
 			});
 
-			rp(`http://localhost:${port}/healthz`).then((resp) => {
+			try {
+				const response = await axios.get(
+					`http://localhost:${port}/healthz`
+				);
+				expect(response.status).toBe(200);
 				done();
-			});
+			} catch (error) {
+				done(error);
+			}
 		});
 
-		it("should fail health check", (done) => {
+		it("should fail health check", async (done) => {
 			publisher.publishFailure({
 				healthy: false,
 			});
 
-			rp(`http://localhost:${port}/healthz`).catch((resp) => {
-				expect(resp.statusCode).toBe(500);
+			try {
+				await axios.get(`http://localhost:${port}/healthz`);
+			} catch (error) {
+				if (axios.isAxiosError(error)) {
+					expect(error.response?.status).toBe(500);
+				}
 				done();
-			});
+			}
 		});
 	});
 });

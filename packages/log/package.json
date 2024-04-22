@@ -26,9 +26,8 @@
     "winston-papertrail": "^1.0.5"
   },
   "devDependencies": {
-    "@fruster/bus": "^1.0.0-alpha.15",
+    "@fruster/test-utils": "^1.0.0-alpha.15",
     "@types/jasmine": "^2.8.5",
-    "fruster-test-utils": "^0.6.5",
     "jasmine": "^2.4.1",
     "jasmine-spec-reporter": "^2.7.0"
   },

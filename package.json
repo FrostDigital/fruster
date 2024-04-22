@@ -1,6 +1,10 @@
 {
   "name": "root",
   "private": true,
+  "scripts": {
+    "test": "lerna exec -- npm run test",
+    "audit:high": "lerna exec -- npm audit --audit-level=high"
+  },
   "devDependencies": {
     "lerna": "^4.0.0"
   },
