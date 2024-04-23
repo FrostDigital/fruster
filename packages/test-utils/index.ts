@@ -1,5 +1,5 @@
 import getPort from "get-port";
-import mongo, { Db } from "mongodb";
+import mongo, { Db, MongoClient } from "mongodb";
 import MockService, { MockServiceOpts } from "./MockService";
 const nsc = require("nats-server-control");
 import * as fBus from "@fruster/bus";
@@ -63,6 +63,7 @@ export interface FrusterTestUtilsOptions {
 
 export interface FrusterTestUtilsConnection {
 	db: Db;
+	client?: MongoClient;
 	port: number;
 	server: any;
 	natsUrl: string;
@@ -72,6 +73,7 @@ export interface FrusterTestUtilsConnection {
 
 interface FrusterTestUtilsConnectionBuilder {
 	db?: Db;
+	client?: MongoClient;
 	port?: number;
 	server?: any;
 	natsUrl?: string;
@@ -235,7 +237,9 @@ async function connectToMongo(
 	connection: FrusterTestUtilsConnectionBuilder
 ) {
 	if (opts.mongoUrl) {
-		connection.db = await mongo.connect(opts.mongoUrl);
+		const client = await mongo.connect(opts.mongoUrl);
+		connection.db = client.db();
+		connection.client = client;
 		return connection;
 	}
 	return connection;
@@ -321,7 +325,7 @@ export function stop(
 			});
 			return Promise.all(dropCollections)
 				.then(() => connection.db?.dropDatabase())
-				.then(() => connection.db?.close());
+				.then(() => connection.client?.close());
 		});
 	}
 

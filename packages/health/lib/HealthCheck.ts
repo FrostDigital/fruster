@@ -1,7 +1,7 @@
 import bus, { CreateFrusterRequest, FrusterRequest } from "@fruster/bus";
 import log from "@fruster/log";
 import ms from "ms";
-import uuid from "uuid";
+import { v4 } from "uuid";
 import conf from "../conf";
 import FileSystemPublisher from "./publishers/FileSystemPublisher";
 import HttpPublisher from "./publishers/HttpPublisher";
@@ -47,7 +47,7 @@ class HealthCheck {
 	private gracePeriod: number;
 	private busAddress: string;
 	private appName: string;
-	private instanceId = uuid.v4().substr(0, 8);
+	private instanceId = v4().substr(0, 8);
 	private allowedFailedAttempts: number;
 	private publishers: (FileSystemPublisher | HttpPublisher)[];
 
@@ -110,10 +110,10 @@ class HealthCheck {
 			return;
 		}
 
-		this.lastPingId = uuid.v4();
+		this.lastPingId = v4();
 
 		const msg: CreateFrusterRequest<PingRequest> = {
-			reqId: uuid.v4(),
+			reqId: v4(),
 			data: {
 				pingId: this.lastPingId,
 				app: this.appName,
