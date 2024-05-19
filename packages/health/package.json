@@ -1,6 +1,6 @@
 {
 	"name": "@fruster/health",
-	"version": "1.0.0-alpha.17",
+	"version": "1.0.0-alpha.18",
 	"description": "Health checks for Fruster services",
 	"types": "dist/index.d.ts",
 	"main": "dist/index.js",
@@ -16,8 +16,8 @@
 		"uuid": "^9.0.1"
 	},
 	"devDependencies": {
-		"@fruster/bus": "^1.0.0-alpha.17",
-		"@fruster/log": "^1.0.0-alpha.17",
+		"@fruster/bus": "^1.0.0-alpha.18",
+		"@fruster/log": "^1.0.0-alpha.18",
 		"@types/jasmine": "^3.6.4",
 		"@types/ms": "^0.7.34",
 		"@types/node": "^18.17.1",
