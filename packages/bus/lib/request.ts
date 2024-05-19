@@ -95,14 +95,6 @@ function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<Fr
 			}
 		});
 
-		// Cleanup data subscription after timeout, note that it might already have been
-		// unsubscribed if all chunks have been received
-		setTimeout(() => {
-			try {
-				natsClient.unsubscribe(dataSid);
-			} catch (e) {}
-		}, UNSUBSCRIBE_DATA_TIMEOUT);
-
 		const sid = natsClient.subscribe(replyTo, {}, async (jsonResp: FrusterResponse) => {
 			if (jsonResp.dataSubject && jsonResp.chunks) {
 				// Responder want requester data to be chunked to provided `dataSubject`
@@ -120,6 +112,14 @@ function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<Fr
 				processResponse();
 			}
 		});
+
+		// Cleanup data subscription after timeout, note that it might already have been
+		// unsubscribed if all chunks have been received or if non data response has been received
+		setTimeout(() => {
+			try {
+				natsClient.unsubscribe(dataSid);
+			} catch (e) {}
+		}, UNSUBSCRIBE_DATA_TIMEOUT);
 
 		async function processResponse() {
 			if (res.dataEncoding) {
@@ -155,6 +155,7 @@ function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<Fr
 				if (responses.length >= reqOptions.maxResponses) {
 					resolve(responses);
 					natsClient.unsubscribe(sid);
+					natsClient.unsubscribe(dataSid);
 				}
 			} else {
 				if (utils.isError(res)) {
@@ -168,6 +169,7 @@ function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<Fr
 				}
 
 				natsClient.unsubscribe(sid);
+				natsClient.unsubscribe(dataSid);
 			}
 		}
 
