@@ -25,7 +25,8 @@ pipeline {
             
             steps {
                 script {        
-                    sh "export CI=1"           
+                    sh "export CI=1"     
+                    sh "npm install lerna@4"      
                     sh "npm run clean"
                     sh "npm install"
                     sh "npm test"
