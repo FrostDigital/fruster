@@ -17,34 +17,29 @@ describe("HttpPublisher", () => {
 			publisher.stop();
 		});
 
-		it("should pass health check", async (done) => {
+		it("should pass health check", async () => {
 			publisher.publishSuccess({
 				healthy: true,
 			});
 
-			try {
-				const response = await axios.get(
-					`http://localhost:${port}/healthz`
-				);
-				expect(response.status).toBe(200);
-				done();
-			} catch (error) {
-				done(error);
-			}
+			const response = await axios.get(
+				`http://localhost:${port}/healthz`
+			);
+			expect(response.status).toBe(200);
 		});
 
-		it("should fail health check", async (done) => {
+		it("should fail health check", async () => {
 			publisher.publishFailure({
 				healthy: false,
 			});
 
 			try {
 				await axios.get(`http://localhost:${port}/healthz`);
+				expect(true).toBe(false);
 			} catch (error) {
 				if (axios.isAxiosError(error)) {
 					expect(error.response?.status).toBe(500);
 				}
-				done();
 			}
 		});
 	});

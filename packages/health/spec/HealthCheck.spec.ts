@@ -1,6 +1,6 @@
 import { hasHealthProbe, removeHealthProbe } from "../lib/file-util";
 import HealthCheck, { HealthStatus } from "../lib/HealthCheck";
-const nsc = require("nats-server-control");
+import { startNatsServer } from "./support/test-utils";
 
 describe("Health check", () => {
 	let healthCheck: HealthCheck;
@@ -14,9 +14,9 @@ describe("Health check", () => {
 
 		removeHealthProbe();
 
-		nsc.startServer(busPort)
-			.then((oServer) => {
-				natsServer = oServer;
+		startNatsServer(busPort)
+			.then((conn) => {
+				natsServer = conn.server;
 			})
 			.then(done)
 			.catch(done.fail);
