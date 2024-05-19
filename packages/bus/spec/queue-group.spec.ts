@@ -31,10 +31,10 @@ describe("Queue group", function () {
 				replies++;
 			}
 		}
-		spawnClient(natsConnection.port, subject, true).then(handle);
-		spawnClient(natsConnection.port, subject, true).then(handle);
+		spawnClient(natsConnection.port, subject, true, handle);
+		spawnClient(natsConnection.port, subject, true, handle);
 
-		await wait(4000);
+		await wait(3000);
 
 		bus.publish({
 			subject,
@@ -57,10 +57,10 @@ describe("Queue group", function () {
 				replies++;
 			}
 		}
-		spawnClient(natsConnection.port, subject, false).then(handle);
-		spawnClient(natsConnection.port, subject, false).then(handle);
+		spawnClient(natsConnection.port, subject, false, handle);
+		spawnClient(natsConnection.port, subject, false, handle);
 
-		await wait(4000);
+		await wait(3000);
 
 		console.log("Publishing message to", subject);
 		bus.publish({
@@ -77,7 +77,7 @@ describe("Queue group", function () {
 	});
 });
 
-function spawnClient(natsPort: number, subject: string, createQueueGroup: boolean) {
+function spawnClient(natsPort: number, subject: string, createQueueGroup: boolean, cb: (gotMessage: boolean) => void) {
 	const clientPath = path.join(__dirname, "support", "test-client.ts");
 
 	let spawned = spawn(path.join("node_modules", ".bin", "ts-node"), [clientPath], {
@@ -96,15 +96,11 @@ function spawnClient(natsPort: number, subject: string, createQueueGroup: boolea
 		console.log(`spawned stderr: ${data}`);
 	});
 
-	return new Promise<boolean>((resolve, reject) => {
-		spawned.on("error", (error) => {
-			console.log(`spawned error: ${error}`);
-			reject(error);
-		});
-		spawned.on("close", (exitCode) => {
-			let gotMessage = exitCode == 0;
-			resolve(gotMessage);
-		});
+	spawned.on("error", (error) => {
+		console.log(`spawned error: ${error}`);
+	});
+	spawned.on("close", (exitCode) => {
+		cb(exitCode == 0);
 	});
 }
 
