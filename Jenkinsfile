@@ -8,6 +8,13 @@ pipeline {
     }
 
     stages {
+        stage("Verify environment") {
+            stepts {
+                // Verify that gnatsd is available and if not fail the build
+                sh "gnatsd -v"
+            }
+        }
+
         stage('Checkout Code') {
             steps {
                 checkout scm // Checks out source code from the configured repository
