@@ -9,9 +9,9 @@ pipeline {
 
     stages {
         stage("Verify environment") {
-            stepts {
+            steps {
                 // Verify that gnatsd is available and if not fail the build
-                sh "gnatsd -v"
+                sh "nats-server -v"
             }
         }
 
