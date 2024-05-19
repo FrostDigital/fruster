@@ -19,6 +19,7 @@ pipeline {
             steps {
                 script {        
                     sh "export CI=1"           
+                    sh "npm run clean"
                     sh "npm install"
                     sh "npm test"
                 }
