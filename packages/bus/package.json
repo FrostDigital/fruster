@@ -43,6 +43,7 @@
 		"nats-server-control": "0.0.1",
 		"nyc": "^15.1.0",
 		"rimraf": "^5.0.5",
+		"ts-node": "^10.9.2",
 		"typescript": "5.4.5"
 	},
 	"repository": {
