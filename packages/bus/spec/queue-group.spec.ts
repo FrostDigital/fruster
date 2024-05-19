@@ -23,7 +23,7 @@ describe("Queue group", function () {
 		bus.closeAll();
 	});
 
-	it("should form a queue group when subscribing", (done) => {
+	it("should form a queue group when subscribing", async () => {
 		let replies = 0;
 
 		function handle(gotMessage: boolean) {
@@ -34,23 +34,22 @@ describe("Queue group", function () {
 		spawnClient(natsConnection.port, subject, true).then(handle);
 		spawnClient(natsConnection.port, subject, true).then(handle);
 
-		setTimeout(() => {
-			bus.publish({
-				subject,
-				message: {
-					foo: "bar",
-					reqId: "reqId",
-				},
-			});
+		await wait(4000);
 
-			setTimeout(() => {
-				expect(replies).toBe(1);
-				done();
-			}, 1000);
-		}, 4000);
+		bus.publish({
+			subject,
+			message: {
+				foo: "bar",
+				reqId: "reqId",
+			},
+		});
+
+		await wait(1000);
+
+		expect(replies).toBe(1);
 	});
 
-	it("should not form a queue group when subscribing", (done) => {
+	it("should not form a queue group when subscribing", async () => {
 		let replies = 0;
 
 		function handle(gotMessage: boolean) {
@@ -61,21 +60,20 @@ describe("Queue group", function () {
 		spawnClient(natsConnection.port, subject, false).then(handle);
 		spawnClient(natsConnection.port, subject, false).then(handle);
 
-		setTimeout(() => {
-			console.log("Publishing message to", subject);
-			bus.publish({
-				subject,
-				message: {
-					foo: "bar",
-					reqId: "reqId",
-				},
-			});
+		await wait(4000);
 
-			setTimeout(() => {
-				expect(replies).toBe(2);
-				done();
-			}, 1000);
-		}, 4000);
+		console.log("Publishing message to", subject);
+		bus.publish({
+			subject,
+			message: {
+				foo: "bar",
+				reqId: "reqId",
+			},
+		});
+
+		await wait(1000);
+
+		expect(replies).toBe(2);
 	});
 });
 
@@ -105,3 +103,9 @@ function spawnClient(natsPort: number, subject: string, createQueueGroup: boolea
 		});
 	});
 }
+
+const wait = async (duration: number) => {
+	return new Promise((resolve) => {
+		setTimeout(resolve, duration);
+	});
+};
