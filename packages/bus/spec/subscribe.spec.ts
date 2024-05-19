@@ -123,46 +123,42 @@ describe("subscribe", function () {
 		}
 	});
 
-	it("should translate uncaught exception to internal server error when string is thrown", async (done) => {
+	it("should translate uncaught exception to internal server error when string is thrown", async () => {
 		bus.subscribe({ subject: "throw-up" }, () => {
 			throw "This is uncaught";
 		});
 
-		try {
-			await bus.request({
-				subject: "throw-up",
-				message: {
-					reqId: "reqId",
-					data: {},
-				},
-			});
-		} catch (err: any) {
-			expect(err.status).toBe(500);
-			expect(err.reqId).toBe("reqId");
-			expect(err.error.detail).toBe("This is uncaught");
-			done();
-		}
+		const res = await bus.request({
+			subject: "throw-up",
+			message: {
+				reqId: "reqId",
+				data: {},
+			},
+			throwErrors: false,
+		});
+
+		expect(res.status).toBe(500);
+		expect(res.reqId).toBe("reqId");
+		expect(res.error?.detail).toBe("This is uncaught");
 	});
 
-	it("should translate uncaught exception to internal server error when Error is thrown", async (done) => {
+	it("should translate uncaught exception to internal server error when Error is thrown", async () => {
 		bus.subscribe({ subject: "throw-up-again" }, async () => {
 			throw new Error("This is uncaught");
 		});
 
-		try {
-			await bus.request({
-				subject: "throw-up-again",
-				message: {
-					reqId: "reqId",
-					data: {},
-				},
-			});
-		} catch (err: any) {
-			expect(err.status).toBe(500);
-			expect(err.reqId).toBe("reqId");
-			expect(err.error.detail).toMatch("This is uncaught");
-			done();
-		}
+		const res = await bus.request({
+			subject: "throw-up-again",
+			message: {
+				reqId: "reqId",
+				data: {},
+			},
+			throwErrors: false,
+		});
+
+		expect(res.status).toBe(500);
+		expect(res.reqId).toBe("reqId");
+		expect(res.error?.detail).toMatch("This is uncaught");
 	});
 
 	it("should subscribe on legacy options request to keep backward compatibility", async () => {
