@@ -97,6 +97,10 @@ function spawnClient(natsPort: number, subject: string, createQueueGroup: boolea
 	});
 
 	return new Promise<boolean>((resolve, reject) => {
+		spawned.on("error", (error) => {
+			console.log(`spawned error: ${error}`);
+			reject(error);
+		});
 		spawned.on("close", (exitCode) => {
 			let gotMessage = exitCode == 0;
 			resolve(gotMessage);

@@ -5,6 +5,8 @@ const port = process.env.PORT;
 const createQueueGroup = process.env.CREATE_QUEUE_GROUP == "true";
 const timeout = 4000;
 
+console.log("Spawning client with subject", subject, "createQueueGroup", createQueueGroup);
+
 bus.connect("nats://localhost:" + port).then(() => {
 	console.log("Spawned client was connected 🔌");
 
