@@ -13,7 +13,8 @@
     "start": "fruster-runner ./app.ts",
     "test": "fruster-runner ./spec/support/jasmine-runner.ts",
     "test:watch": "ts-node-dev --respawn --no-notify ./spec/support/jasmine-runner.ts",
-    "dev": "nodemon --exec \"fruster-runner ./app.ts\""
+    "dev": "nodemon --exec \"fruster-runner ./app.ts\"",
+    "clean": "echo \"Nothing to clean\""
   },
   "dependencies": {
     "@fruster/bus": "^1.0.0-alpha.17",
@@ -30,5 +31,8 @@
     "@types/node": "^17.0.21",
     "jasmine": "^4.0.2",
     "jasmine-spec-reporter": "^7.0.0"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.4.5"
   }
 }

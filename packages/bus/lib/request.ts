@@ -11,6 +11,12 @@ import utils, { createResponseDataReplyToSubject, createResponseReplyToSubject }
 
 let natsClient: Client;
 
+/**
+ * Timeout for unsubscribing from data subject. This is used as cleanup in case
+ * response is not received and data subject is not unsubscribed.
+ */
+const UNSUBSCRIBE_DATA_TIMEOUT = 5 * 1000;
+
 export const request = (client: Client) => {
 	natsClient = client;
 
@@ -88,6 +94,14 @@ function busRequest(reqOptions: RequestOptions & RequestManyOptions): Promise<Fr
 				}
 			}
 		});
+
+		// Cleanup data subscription after timeout, note that it might already have been
+		// unsubscribed if all chunks have been received
+		setTimeout(() => {
+			try {
+				natsClient.unsubscribe(dataSid);
+			} catch (e) {}
+		}, UNSUBSCRIBE_DATA_TIMEOUT);
 
 		const sid = natsClient.subscribe(replyTo, {}, async (jsonResp: FrusterResponse) => {
 			if (jsonResp.dataSubject && jsonResp.chunks) {

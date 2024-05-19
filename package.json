@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "test": "lerna exec -- npm run test",
+    "install": "lerna exec -- npm install && lerna bootstrap",
+    "clean": "lerna exec -- npm run clean",
     "audit:high": "lerna exec -- npm audit --audit-level=high"
   },
   "devDependencies": {
