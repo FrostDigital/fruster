@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage("Verify environment") {
             steps {
-                // Verify that gnatsd is available and if not fail the build
+                // Verify that nats-server is available and if not fail the build
                 sh "nats-server -v"
             }
         }

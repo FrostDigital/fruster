@@ -20,6 +20,6 @@ spin up NATS server.
 
 ## Test
 
-You need `gnatsd` to run tests. Read installation instructions [here](https://docs.nats.io/running-a-nats-service/introduction/installation).
+You need `nats-server` locally to run tests. Read installation instructions [here](https://docs.nats.io/running-a-nats-service/introduction/installation).
 
     npm test
