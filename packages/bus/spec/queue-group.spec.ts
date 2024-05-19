@@ -80,7 +80,7 @@ describe("Queue group", function () {
 function spawnClient(natsPort: number, subject: string, createQueueGroup: boolean) {
 	const clientPath = path.join(__dirname, "support", "test-client.ts");
 
-	let spawned = spawn("ts-node", [clientPath], {
+	let spawned = spawn(path.join("node_modules", ".bin", "ts-node"), [clientPath], {
 		env: Object.assign(process.env, {
 			PORT: natsPort,
 			SUBJECT: subject,
