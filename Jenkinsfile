@@ -4,6 +4,7 @@ pipeline {
     }
 
     environment {    
+        CI = '1'
     }
 
     stages {
