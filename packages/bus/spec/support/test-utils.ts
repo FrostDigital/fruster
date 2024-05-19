@@ -2,7 +2,7 @@ import { spawn } from "child_process";
 import { Client } from "nats";
 import bus from "../../index";
 
-export function startNatsServer(port: number) {
+export function startNatsServer(port?: number) {
 	return new Promise<TestConnection>((resolve, reject) => {
 		const natsServerPort = port || Math.floor(Math.random() * 60000 + 2000);
 		const natsUrl = "nats://localhost:" + natsServerPort;
