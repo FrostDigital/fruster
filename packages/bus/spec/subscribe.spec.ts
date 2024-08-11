@@ -1,7 +1,8 @@
-import { startNatsServerAndConnectBus, TestConnection } from "./support/test-utils";
 import bus from "../index";
 import { reqId, user } from "../lib/async-context";
 import { User } from "../lib/model/FrusterRequest";
+import subscribeCache from "../lib/subscribe-cache";
+import { startNatsServerAndConnectBus, TestConnection } from "./support/test-utils";
 
 describe("subscribe", function () {
 	let natsConnection: TestConnection;
@@ -222,5 +223,22 @@ describe("subscribe", function () {
 
 		bus.request({ subject: subject1, message: { reqId: "1", user: { id: "1" } as User } });
 		bus.request({ subject: subject1, message: { reqId: "2", user: { id: "2" } as User } });
+	});
+
+	it("should subscribe and unsubscribe", async () => {
+		const sub = bus.subscribe({ subject: "subscribe-and-unsubscribe" }, async () => {
+			return {
+				status: 200,
+			};
+		});
+
+		const numSubsBeforeUnsub = subscribeCache.get().length;
+
+		sub.unsubscribe();
+
+		expect(subscribeCache.get().length).toBe(numSubsBeforeUnsub - 1);
+
+		// Unsubscribing again should not throw error
+		sub.unsubscribe();
 	});
 });

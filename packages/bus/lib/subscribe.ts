@@ -121,7 +121,15 @@ export class Subscribe {
 
 	private parsedSubject?: ParsedSubject;
 
-	private sid?: number;
+	/**
+	 * NATS subscription id
+	 */
+	public sid?: number;
+
+	/**
+	 * NATS subscription id for "options" request. This is a no-op and only here for backward compatibility.
+	 */
+	public optionsSid?: number;
 
 	/**
 	 * If this subscribe has a parent subscribe from which messages origins.
@@ -186,6 +194,20 @@ export class Subscribe {
 		return this;
 	}
 
+	/**
+	 * Unsubscribes from NATS.
+	 */
+	unsubscribe() {
+		if (this.sid) {
+			natsClient.unsubscribe(this.sid);
+			subscribeCache.removeBySid(this.sid);
+		}
+
+		if (this.optionsSid) natsClient.unsubscribe(this.optionsSid);
+
+		// TODO: Handle unsubscribe for internal routing, a.k.a. child and parent subscribes
+	}
+
 	private parseSubscribeOptions(options: SubscribeOptions | string, cb?: HandleFn) {
 		if (typeof options === "string") {
 			if (!cb) throw new Error("Missing handler function for subscribe on subject: " + options);
@@ -223,7 +245,7 @@ export class Subscribe {
 			// Add subscribe for the legacy "options request", however this is a no-op
 			// only here for backward compatibility, the calling service will simply
 			// be redirected to the actual subject
-			natsClient.subscribe(
+			this.optionsSid = natsClient.subscribe(
 				"options." + this.getParsedSubject().subject,
 				this.natsSubscribeOptions || {},
 				(jsonMsg: any, replyTo: string) => {
