@@ -22,6 +22,10 @@ class SubscribeCache {
 	clear() {
 		this.subscribes = [];
 	}
+
+	removeBySid(sid: number) {
+		this.subscribes = this.subscribes.filter((sub) => sub.sid !== sid);
+	}
 }
 
 const subscribeCache = new SubscribeCache();
