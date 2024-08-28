@@ -358,9 +358,6 @@ export class Subscribe {
 									throw resolvedResponse;
 								}
 
-								// // It's a Promise<void>, then we shouldn't publish anything
-								// if (!resolvedResponse) return;
-
 								resolvedResponse.reqId = jsonMsg.reqId;
 								resolvedResponse.transactionId = jsonMsg.transactionId;
 								resolvedResponse.ms = Date.now() - startTime;
