@@ -12,12 +12,14 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
     "experimentalDecorators": true,
     "checkJs": false,
-    "useUnknownInCatchVariables": false
+    "useUnknownInCatchVariables": false,
+    "outDir": "dist",
+    "sourceMap": true,
+    "inlineSources": true
   },
-  "exclude": ["./node_modules/*"],
+  "exclude": ["./node_modules/*", "./dist/*"],
   "fruster": {
     "handlersPath": "**/lib/handlers/**/*.ts"
   }

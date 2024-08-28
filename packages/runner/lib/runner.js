@@ -5,17 +5,31 @@ const path = require("path");
 const { DiagnosticCategory } = require("typescript");
 const frusterTransformer = require("@fruster/ts-transformer").default;
 const tsConfig = require(path.join(process.cwd(), "/tsconfig.json"));
+const fs = require("fs");
 
 /**
  *
  * @param {string[]} args
  */
 function main(args) {
+  const buildTime = args.includes("--build");
+
   const { options, fileNames } = ts.parseJsonConfigFileContent(
     tsConfig,
     ts.sys,
     process.cwd()
   );
+
+  if (buildTime) {
+    if (!options.outDir) {
+      console.error(
+        "💥 fruster-runner aborted compilation: outDir must be specified in tsconfig.json"
+      );
+      process.exit(1);
+    }
+
+    clearOutputDirectory(options.outDir);
+  }
 
   const program = ts.createProgram(fileNames, options);
 
@@ -55,13 +69,43 @@ function main(args) {
     process.exit(1);
   }
 
-  tsNode({
-    files: fileNames,
-    compilerOptions: tsConfig.compilerOptions,
-    transformers,
-  });
+  if (buildTime) {
+    // Build-time: emit transformed JavaScript files
+    emitTransformedFiles(program, transformers, options, fileNames);
+    console.log("✅ Transformed files emitted successfully.");
+  } else {
+    // Runtime: use ts-node with transformers
+    tsNode({
+      files: fileNames,
+      compilerOptions: tsConfig.compilerOptions,
+      transformers,
+    });
 
-  require(path.join(process.cwd(), entryFile));
+    require(path.join(process.cwd(), entryFile));
+  }
+}
+
+/**
+ * Emit transformed JavaScript files to the output directory.
+ * @param {ts.Program} program
+ * @param {ts.CustomTransformers} transformers
+ * @param {ts.CompilerOptions} options
+ * @param {string[]} fileNames
+ */
+function emitTransformedFiles(program, transformers, options, fileNames) {
+  const { emitSkipped, diagnostics } = program.emit(
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    transformers
+  );
+
+  if (emitSkipped) {
+    diagnostics.forEach(prettyPrintDiagnostic);
+    console.error("❌ Error emitting transformed files.");
+    process.exit(1);
+  }
 }
 
 /**
@@ -84,6 +128,17 @@ function prettyPrintDiagnostic(diag) {
     "\x1b[2m" + filePath + (pos !== null ? ":" + pos.line : "") + "\x1b[0m"
   );
   console.log(msg);
+}
+
+function clearOutputDirectory(outDir) {
+  if (!outDir) {
+    return;
+  }
+
+  if (fs.existsSync(outDir)) {
+    // console.log(`🧹 Clearing output directory (${outDir})...`);
+    fs.rmSync(outDir, { recursive: true, force: true });
+  }
 }
 
 try {
