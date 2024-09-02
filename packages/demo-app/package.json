@@ -11,10 +11,12 @@
   },
   "scripts": {
     "start": "fruster-runner ./app.ts",
+    "start:dist": "node ./dist/app.js",
     "test": "fruster-runner ./spec/support/jasmine-runner.ts",
     "test:watch": "ts-node-dev --respawn --no-notify ./spec/support/jasmine-runner.ts",
     "dev": "nodemon --exec \"fruster-runner ./app.ts\"",
-    "clean": "echo \"Nothing to clean\""
+    "clean": "echo \"Nothing to clean\"",
+    "build": "fruster-runner ./app.ts --build"
   },
   "dependencies": {
     "@fruster/bus": "^1.0.0",
