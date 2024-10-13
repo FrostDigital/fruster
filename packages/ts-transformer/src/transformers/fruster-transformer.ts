@@ -132,7 +132,17 @@ function parseHandler(
             )
           );
 
-          debugLog(`Did set requestSchema ${JSON.stringify(reqSchema || {})}`);
+          if (DEBUG) {
+            const stringiedSchema = ts
+              .createPrinter()
+              .printNode(
+                ts.EmitHint.Unspecified,
+                reqSchema,
+                ts.createSourceFile("", "", ts.ScriptTarget.Latest)
+              );
+
+            debugLog(`Did set requestSchema ${stringiedSchema}`);
+          }
         }
       }
 
@@ -153,7 +163,17 @@ function parseHandler(
             )
           );
 
-          debugLog(`Did set responseSchema ${JSON.stringify(resSchema || {})}`);
+          if (DEBUG) {
+            const stringiedSchema = ts
+              .createPrinter()
+              .printNode(
+                ts.EmitHint.Unspecified,
+                resSchema,
+                ts.createSourceFile("", "", ts.ScriptTarget.Latest)
+              );
+
+            debugLog(`Did set responseSchema ${stringiedSchema}`);
+          }
         }
       }
 
