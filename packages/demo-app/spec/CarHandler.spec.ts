@@ -1,7 +1,7 @@
 import bus, { testBus } from "@fruster/bus";
 import { startBeforeAll } from "@fruster/test-utils";
 import { start } from "../demo-service";
-import { GetCarRequest } from "../lib/handlers/CarHandler";
+import { GetCarRequest } from "../lib/handlers/GetCarHandler";
 import { Car } from "../lib/models/Car";
 
 describe("CarHandler", () => {
