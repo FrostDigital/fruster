@@ -1,8 +1,8 @@
+import * as fBus from "@fruster/bus";
 import getPort from "get-port";
-import mongo, { Db, MongoClient } from "mongodb";
+import { Db, MongoClient } from "mongodb";
 import MockService, { MockServiceOpts } from "./MockService";
 const nsc = require("nats-server-control");
-import * as fBus from "@fruster/bus";
 
 interface ServiceWithStart {
 	[x: string]: any;
@@ -30,15 +30,19 @@ export interface FrusterTestUtilsOptions {
 	/**
 	 * Function to run before start.
 	 */
-	beforeStart?: () => void;
+	beforeStart?: () => void | Promise<void>;
 	/**
 	 * Function to run after start.
 	 */
-	afterStart?: (connection: FrusterTestUtilsConnection) => void;
+	afterStart?: (
+		connection: FrusterTestUtilsConnection
+	) => void | Promise<void>;
 	/**
 	 * Function to run before stopping.
 	 */
-	beforeStop?: (connection: FrusterTestUtilsConnection) => void;
+	beforeStop?: (
+		connection: FrusterTestUtilsConnection
+	) => void | Promise<void>;
 	/**
 	 * The mongo url to connect to.
 	 */
