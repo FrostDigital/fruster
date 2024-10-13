@@ -237,7 +237,16 @@ async function connectToMongo(
 	connection: FrusterTestUtilsConnectionBuilder
 ) {
 	if (opts.mongoUrl) {
-		const client = await mongo.connect(opts.mongoUrl);
+		const client = new MongoClient(opts.mongoUrl);
+		try {
+			await client.connect();
+		} catch (e) {
+			console.log(
+				`Test uitls failed connecting to mongo on ${opts.mongoUrl}`,
+				e
+			);
+			throw e;
+		}
 		connection.db = client.db();
 		connection.client = client;
 		return connection;

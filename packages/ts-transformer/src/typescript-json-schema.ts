@@ -1,3 +1,5 @@
+// https://github.com/YousefED/typescript-json-schema/blob/master/typescript-json-schema.ts
+
 import * as glob from "glob";
 import { stringify } from "safe-stable-stringify";
 import * as path from "path";

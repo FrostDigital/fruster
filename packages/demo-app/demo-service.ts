@@ -1,5 +1,5 @@
 import bus from "@fruster/bus";
-import CarHandler from "./lib/handlers/CarHandler";
+import GetCarHandler from "./lib/handlers/GetCarHandler";
 import "./lib/errors";
 
 export async function start(natsUrl: string) {
@@ -9,5 +9,5 @@ export async function start(natsUrl: string) {
 }
 
 const registerHandlers = () => {
-  new CarHandler();
+  new GetCarHandler();
 };

@@ -3,12 +3,12 @@ import { injectable, subscribe } from "@fruster/decorators";
 import { Car } from "../models/Car";
 import * as uuid from "uuid";
 
-export interface GetCarRequest {
+export interface GetCarByIdRequest {
   brand?: string;
 }
 
 @injectable()
-class CarHandler {
+class GetCarByIdHandler {
   @subscribe({
     subject: "http.get.car.:id",
   })
@@ -30,4 +30,4 @@ class CarHandler {
   }
 }
 
-export default CarHandler;
+export default GetCarByIdHandler;

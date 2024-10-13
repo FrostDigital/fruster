@@ -9,11 +9,11 @@ This repo uses `lerna` as tool to link, publish, etc modules.
 Link all modules:
 
 ```
-npx lerna bootstrap
+npx lerna@4 bootstrap
 ```
 
 Run tests:
 
 ```
-npx lerna run test
+npx lerna@4 run test
 ```

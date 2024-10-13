@@ -4,11 +4,14 @@ import { Car } from "../models/Car";
 import * as uuid from "uuid";
 
 export interface GetCarRequest {
+  /**
+   * @TJS-type string
+   */
   brand?: string;
 }
 
 @injectable()
-class CarHandler {
+class GetCarHandler {
   @subscribe({
     subject: "demo-service.get-car",
   })
@@ -46,4 +49,4 @@ class CarHandler {
   }
 }
 
-export default CarHandler;
+export default GetCarHandler;

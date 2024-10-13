@@ -76,7 +76,7 @@ describe("Before jasmine test convenient method", () => {
 				// create a collection and see if it removes
 				return connection.db
 					?.collection("foo")
-					.insert({ _id: "hello" });
+					.insertOne({ id: "hello" });
 			},
 			beforeStop: (connection) => {
 				console.log("invoking beforeStop()");
