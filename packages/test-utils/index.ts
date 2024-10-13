@@ -238,7 +238,15 @@ async function connectToMongo(
 ) {
 	if (opts.mongoUrl) {
 		const client = new MongoClient(opts.mongoUrl);
-		await client.connect();
+		try {
+			await client.connect();
+		} catch (e) {
+			console.log(
+				`Test uitls failed connecting to mongo on ${opts.mongoUrl}`,
+				e
+			);
+			throw e;
+		}
 		connection.db = client.db();
 		connection.client = client;
 		return connection;
