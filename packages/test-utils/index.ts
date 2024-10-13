@@ -237,7 +237,8 @@ async function connectToMongo(
 	connection: FrusterTestUtilsConnectionBuilder
 ) {
 	if (opts.mongoUrl) {
-		const client = await mongo.connect(opts.mongoUrl);
+		const client = new MongoClient(opts.mongoUrl);
+		await client.connect();
 		connection.db = client.db();
 		connection.client = client;
 		return connection;
