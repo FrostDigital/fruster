@@ -1,9 +1,10 @@
+// https://github.com/YousefED/typescript-json-schema/blob/master/typescript-json-schema.ts
 import * as glob from "glob";
 import { stringify } from "safe-stable-stringify";
 import * as path from "path";
 import { createHash } from "crypto";
 import * as ts from "typescript";
-import { JSONSchema7 } from "json-schema";
+import { JSONSchema7, JSONSchema7TypeName } from "json-schema";
 import { pathEqual } from "path-equal";
 export { Program, CompilerOptions, Symbol } from "typescript";
 
@@ -49,6 +50,8 @@ export function getDefaultArgs(): Args {
     required: false,
     strictNullChecks: false,
     esModuleInterop: false,
+    skipLibCheck: false,
+    experimentalDecorators: true,
     ignoreErrors: false,
     out: "",
     validationKeywords: [],
@@ -59,6 +62,7 @@ export function getDefaultArgs(): Args {
     id: "",
     defaultNumberType: "number",
     tsNodeRegister: false,
+    constAsEnum: false,
   };
 }
 
@@ -78,7 +82,9 @@ export type Args = {
   required: boolean;
   strictNullChecks: boolean;
   esModuleInterop: boolean;
+  skipLibCheck: boolean;
   ignoreErrors: boolean;
+  experimentalDecorators: boolean;
   out: string;
   validationKeywords: string[];
   include: string[];
@@ -88,14 +94,15 @@ export type Args = {
   id: string;
   defaultNumberType: "number" | "integer";
   tsNodeRegister: boolean;
+  constAsEnum: boolean;
 };
 
 export type PartialArgs = Partial<Args>;
 
 export type PrimitiveType = number | boolean | string | null;
 
+type MetaDefinitionFields = "ignore";
 type RedefinedFields =
-  | "type"
   | "items"
   | "additionalItems"
   | "contains"
@@ -114,9 +121,6 @@ type RedefinedFields =
   | "definitions";
 export type DefinitionOrBoolean = Definition | boolean;
 export interface Definition extends Omit<JSONSchema7, RedefinedFields> {
-  // The type field here is incompatible with the standard definition
-  type?: string | string[];
-
   // Non-standard fields
   propertyOrder?: string[];
   defaultProperties?: string[];
@@ -148,6 +152,9 @@ export interface Definition extends Omit<JSONSchema7, RedefinedFields> {
     [key: string]: DefinitionOrBoolean;
   };
 }
+
+/** A looser Definition type that allows for indexing with arbitrary strings. */
+type DefinitionIndex = { [key: string]: Definition[keyof Definition] };
 
 export type SymbolRef = {
   name: string;
@@ -181,7 +188,7 @@ function extend(target: any, ..._: any[]): any {
 }
 
 function unique(arr: string[]): string[] {
-  const temp = {};
+  const temp: Record<string, true> = {};
   for (const e of arr) {
     temp[e] = true;
   }
@@ -291,12 +298,12 @@ function resolveTupleType(propertyType: ts.Type): ts.TupleTypeNode | null {
   return propertyType as any;
 }
 
-const simpleTypesAllowedProperties = {
+const simpleTypesAllowedProperties: Record<string, true> = {
   type: true,
   description: true,
 };
 
-function addSimpleType(def: Definition, type: string): boolean {
+function addSimpleType(def: Definition, type: JSONSchema7TypeName): boolean {
   for (const k in def) {
     if (!simpleTypesAllowedProperties[k]) {
       return false;
@@ -335,11 +342,11 @@ function makeNullable(def: Definition): Definition {
     if (union) {
       union.push({ type: "null" });
     } else {
-      const subdef = {};
-      for (var k in def) {
+      const subdef: DefinitionIndex = {};
+      for (var k in def as any) {
         if (def.hasOwnProperty(k)) {
-          subdef[k] = def[k];
-          delete def[k];
+          subdef[k] = def[k as keyof Definition];
+          delete def[k as keyof typeof def];
         }
       }
       def.anyOf = [subdef, { type: "null" }];
@@ -434,6 +441,7 @@ const validationKeywords = {
     $ref: true,
     id: true,
     $id: true,
+    $comment: true,
     title: true
 };
 
@@ -447,11 +455,12 @@ const annotationKeywords: { [k in keyof typeof validationKeywords]?: true } = {
   description: true,
   default: true,
   examples: true,
+  title: true,
   // A JSDoc $ref annotation can appear as a $ref.
   $ref: true,
 };
 
-const subDefinitions = {
+const subDefinitions: Record<string, true> = {
   items: true,
   additionalProperties: true,
   contains: true,
@@ -499,6 +508,12 @@ export class JsonSchemaGenerator {
   private userValidationKeywords: ValidationKeywords;
 
   /**
+   * If true, this makes constants be defined as enums with a single value. This is useful
+   * for cases where constant values are not supported, such as OpenAPI.
+   */
+  private constAsEnum: boolean;
+
+  /**
    * Types are assigned names which are looked up by their IDs.  This is the
    * map from type IDs to type names.
    */
@@ -526,25 +541,7 @@ export class JsonSchemaGenerator {
       (acc, word) => ({ ...acc, [word]: true }),
       {}
     );
-  }
-
-  public addSymbol(type: ts.Type, symbol: ts.Symbol, name: string) {
-    const fullyQualifiedName = this.tc.getFullyQualifiedName(symbol);
-    const typeName = fullyQualifiedName.replace(/".*"\./, "");
-
-    const symbolRef: SymbolRef = {
-      symbol,
-      name,
-      typeName,
-      fullyQualifiedName,
-    };
-
-    this.symbols.push(symbolRef);
-
-    this.allSymbols[name] = type;
-    this.userSymbols[name] = symbol;
-
-    return symbolRef;
+    this.constAsEnum = args.constAsEnum;
   }
 
   public get ReffedDefinitions(): { [key: string]: Definition } {
@@ -553,21 +550,23 @@ export class JsonSchemaGenerator {
 
   private isFromDefaultLib(symbol: ts.Symbol) {
     const declarations = symbol.getDeclarations();
-    if (declarations && declarations.length > 0) {
+    if (declarations && declarations.length > 0 && declarations[0].parent) {
       return declarations[0].parent.getSourceFile().hasNoDefaultLib;
     }
     return false;
   }
 
-  private resetSchemaSpecificProperties() {
+  private resetSchemaSpecificProperties(includeAllOverrides: boolean = false) {
     this.reffedDefinitions = {};
     this.typeIdsByName = {};
     this.typeNamesById = {};
 
     // restore schema overrides
-    this.schemaOverrides.forEach((value, key) => {
-      this.reffedDefinitions[key] = value;
-    });
+    if (includeAllOverrides) {
+      this.schemaOverrides.forEach((value, key) => {
+        this.reffedDefinitions[key] = value;
+      });
+    }
   }
 
   /**
@@ -576,7 +575,7 @@ export class JsonSchemaGenerator {
   private parseCommentsIntoDefinition(
     symbol: ts.Symbol,
     definition: Definition,
-    otherAnnotations: {}
+    otherAnnotations: Record<string, true>
   ): void {
     if (!symbol) {
       return;
@@ -588,12 +587,23 @@ export class JsonSchemaGenerator {
 
       if (comments.length) {
         definition.description = comments
-          .map((comment) =>
-            comment.kind === "lineBreak"
-              ? comment.text
-              : comment.text.trim().replace(/\r\n/g, "\n")
-          )
-          .join("");
+          .map((comment) => {
+            const newlineNormalizedComment = comment.text.replace(
+              /\r\n/g,
+              "\n"
+            );
+
+            // If a comment contains a "{@link XYZ}" inline tag that could not be
+            // resolved by the TS checker, then this comment will contain a trailing
+            // whitespace that we need to remove.
+            if (comment.kind === "linkText") {
+              return newlineNormalizedComment.trim();
+            }
+
+            return newlineNormalizedComment;
+          })
+          .join("")
+          .trim();
       }
     }
 
@@ -637,8 +647,8 @@ export class JsonSchemaGenerator {
         if (match) {
           const k = match[1];
           const v = match[2];
-          definition[name] = {
-            ...definition[name],
+          (definition as DefinitionIndex)[name] = {
+            ...(definition as Record<string, Record<string, unknown>>)[name],
             [k]: v ? parseValue(symbol, k, v) : true,
           };
           return;
@@ -648,16 +658,20 @@ export class JsonSchemaGenerator {
       // In TypeScript 3.7+, the "." is kept as part of the annotation name
       if (name.includes(".")) {
         const parts = name.split(".");
-        if (parts.length === 2 && subDefinitions[parts[0]]) {
-          definition[parts[0]] = {
-            ...definition[parts[0]],
+        const key = parts[0] as keyof Definition;
+        if (parts.length === 2 && subDefinitions[key]) {
+          (definition as DefinitionIndex)[key] = {
+            ...(definition[key] as Record<string, unknown>),
             [parts[1]]: text ? parseValue(symbol, name, text) : true,
           };
         }
       }
 
-      if (validationKeywords[name] || this.userValidationKeywords[name]) {
-        definition[name] =
+      if (
+        validationKeywords[name as keyof typeof validationKeywords] ||
+        this.userValidationKeywords[name]
+      ) {
+        (definition as DefinitionIndex)[name] =
           text === undefined ? "" : parseValue(symbol, name, text);
       } else {
         // special annotations
@@ -670,7 +684,8 @@ export class JsonSchemaGenerator {
     propertyType: ts.Type,
     reffedType: ts.Symbol,
     definition: Definition,
-    defaultNumberType = this.args.defaultNumberType
+    defaultNumberType = this.args.defaultNumberType,
+    ignoreUndefined = false
   ): Definition {
     const tupleType = resolveTupleType(propertyType);
 
@@ -678,12 +693,22 @@ export class JsonSchemaGenerator {
       // tuple
       const elemTypes: ts.NodeArray<ts.TypeNode> = (propertyType as any)
         .typeArguments;
-      const fixedTypes = elemTypes.map((elType) =>
-        this.getTypeDefinition(elType as any)
-      );
-      definition.type = "array";
-      definition.items = fixedTypes;
       const targetTupleType = (propertyType as ts.TupleTypeReference).target;
+
+      const fixedTypes = elemTypes.map((elType, index) => {
+        const def = this.getTypeDefinition(elType as any);
+        const label = targetTupleType.labeledElementDeclarations?.[index]?.name
+          ?.getFullText()
+          .trim();
+        if (label) {
+          def.title = label;
+        }
+        return def;
+      });
+      definition.type = "array";
+      if (fixedTypes.length > 0) {
+        definition.items = fixedTypes;
+      }
       definition.minItems = targetTupleType.minLength;
       if (targetTupleType.hasRestElement) {
         definition.additionalItems = fixedTypes[fixedTypes.length - 1];
@@ -713,13 +738,19 @@ export class JsonSchemaGenerator {
         definition.type = isInteger ? "integer" : "number";
       } else if (flags & ts.TypeFlags.Boolean) {
         definition.type = "boolean";
+      } else if (flags & ts.TypeFlags.ESSymbol) {
+        definition.type = "object";
       } else if (flags & ts.TypeFlags.Null) {
         definition.type = "null";
       } else if (
         flags & ts.TypeFlags.Undefined ||
         propertyTypeString === "void"
       ) {
-        definition.type = "undefined";
+        if (!ignoreUndefined) {
+          throw new Error("Not supported: root type undefined");
+        }
+        // will be deleted
+        definition.type = "undefined" as any;
       } else if (flags & ts.TypeFlags.Any || flags & ts.TypeFlags.Unknown) {
         // no type restriction, so that anything will match
       } else if (propertyTypeString === "Date" && !this.args.rejectDateType) {
@@ -729,11 +760,34 @@ export class JsonSchemaGenerator {
         definition.type = "object";
         definition.properties = {};
         definition.additionalProperties = true;
+      } else if (propertyTypeString === "bigint") {
+        definition.type = "number";
+        definition.properties = {};
+        definition.additionalProperties = false;
       } else {
         const value = extractLiteralValue(propertyType);
         if (value !== undefined) {
-          definition.type = typeof value;
-          definition.enum = [value];
+          // typeof value can be: "string", "boolean", "number", or "object" if value is null
+          const typeofValue = typeof value;
+          switch (typeofValue) {
+            case "string":
+            case "boolean":
+              definition.type = typeofValue;
+              break;
+            case "number":
+              definition.type = this.args.defaultNumberType;
+              break;
+            case "object":
+              definition.type = "null";
+              break;
+            default:
+              throw new Error(`Not supported: ${value} as a enum value`);
+          }
+          if (this.constAsEnum) {
+            definition.enum = [value];
+          } else {
+            definition.const = value;
+          }
         } else if (arrayType !== undefined) {
           if (
             propertyType.flags & ts.TypeFlags.Object &&
@@ -747,6 +801,52 @@ export class JsonSchemaGenerator {
             definition.patternProperties = {
               [NUMERIC_INDEX_PATTERN]: this.getTypeDefinition(arrayType),
             };
+            if (
+              !!Array.from((<any>propertyType).members)?.find(
+                (member: [string]) => member[0] !== "__index"
+              )
+            ) {
+              this.getClassDefinition(propertyType, definition);
+            }
+          } else if (propertyType.flags & ts.TypeFlags.TemplateLiteral) {
+            definition.type = "string";
+            // @ts-ignore
+            const { texts, types } = propertyType;
+            const pattern = [];
+            for (let i = 0; i < texts.length; i++) {
+              const text = texts[i].replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
+              const type = types[i];
+
+              if (i === 0) {
+                pattern.push(`^`);
+              }
+
+              if (type) {
+                if (type.flags & ts.TypeFlags.String) {
+                  pattern.push(`${text}.*`);
+                }
+
+                if (
+                  type.flags & ts.TypeFlags.Number ||
+                  type.flags & ts.TypeFlags.BigInt
+                ) {
+                  pattern.push(`${text}[0-9]*`);
+                }
+
+                if (type.flags & ts.TypeFlags.Undefined) {
+                  pattern.push(`${text}undefined`);
+                }
+
+                if (type.flags & ts.TypeFlags.Null) {
+                  pattern.push(`${text}null`);
+                }
+              }
+
+              if (i === texts.length - 1) {
+                pattern.push(`${text}$`);
+              }
+            }
+            definition.pattern = pattern.join("");
           } else {
             definition.type = "array";
             if (!definition.items) {
@@ -873,9 +973,9 @@ export class JsonSchemaGenerator {
         ? (node as ts.EnumDeclaration).members
         : ts.factory.createNodeArray([node as ts.EnumMember]);
     var enumValues: (number | boolean | string | null)[] = [];
-    const enumTypes: string[] = [];
+    const enumTypes: JSONSchema7TypeName[] = [];
 
-    const addType = (type: string) => {
+    const addType = (type: JSONSchema7TypeName) => {
       if (enumTypes.indexOf(type) === -1) {
         enumTypes.push(type);
       }
@@ -886,7 +986,7 @@ export class JsonSchemaGenerator {
       const constantValue = this.tc.getConstantValue(member);
       if (constantValue !== undefined) {
         enumValues.push(constantValue);
-        addType(typeof constantValue);
+        addType(typeof constantValue as JSONSchema7TypeName); // can be only string or number;
       } else {
         // try to extract the enums value; it will probably by a cast expression
         const initial: ts.Expression | undefined = member.initializer;
@@ -932,7 +1032,11 @@ export class JsonSchemaGenerator {
     }
 
     if (enumValues.length > 0) {
-      definition.enum = enumValues.sort();
+      if (enumValues.length > 1) {
+        definition.enum = enumValues;
+      } else {
+        definition.const = enumValues[0];
+      }
     }
 
     return definition;
@@ -940,15 +1044,14 @@ export class JsonSchemaGenerator {
 
   private getUnionDefinition(
     unionType: ts.UnionType,
-    prop: ts.Symbol,
-    unionModifier: string,
+    unionModifier: keyof Definition,
     definition: Definition
   ): Definition {
     const enumValues: PrimitiveType[] = [];
-    const simpleTypes: string[] = [];
+    const simpleTypes: JSONSchema7TypeName[] = [];
     const schemas: Definition[] = [];
 
-    const pushSimpleType = (type: string) => {
+    const pushSimpleType = (type: JSONSchema7TypeName) => {
       if (simpleTypes.indexOf(type) === -1) {
         simpleTypes.push(type);
       }
@@ -965,22 +1068,29 @@ export class JsonSchemaGenerator {
       if (value !== undefined) {
         pushEnumValue(value);
       } else {
-        const def = this.getTypeDefinition(valueType);
-        if (def.type === "undefined") {
-          if (prop) {
-            (<any>prop).mayBeUndefined = true;
+        const symbol = valueType.aliasSymbol;
+        const def = this.getTypeDefinition(
+          valueType,
+          undefined,
+          undefined,
+          symbol,
+          symbol,
+          undefined,
+          undefined,
+          true
+        );
+        if (def.type === ("undefined" as any)) {
+          continue;
+        }
+        const keys = Object.keys(def);
+        if (keys.length === 1 && keys[0] === "type") {
+          if (typeof def.type !== "string") {
+            console.error("Expected only a simple type.");
+          } else {
+            pushSimpleType(def.type);
           }
         } else {
-          const keys = Object.keys(def);
-          if (keys.length === 1 && keys[0] === "type") {
-            if (typeof def.type !== "string") {
-              console.error("Expected only a simple type.");
-            } else {
-              pushSimpleType(def.type);
-            }
-          } else {
-            schemas.push(def);
-          }
+          schemas.push(def);
         }
       }
     }
@@ -996,7 +1106,10 @@ export class JsonSchemaGenerator {
       if (isOnlyBooleans) {
         pushSimpleType("boolean");
       } else {
-        const enumSchema: Definition = { enum: enumValues.sort() };
+        const enumSchema: Definition =
+          enumValues.length > 1
+            ? { enum: enumValues.sort() }
+            : { const: enumValues[0] };
 
         // If all values are of the same primitive type, add a "type" field to the schema
         if (
@@ -1032,11 +1145,16 @@ export class JsonSchemaGenerator {
     if (schemas.length === 1) {
       for (const k in schemas[0]) {
         if (schemas[0].hasOwnProperty(k)) {
-          definition[k] = schemas[0][k];
+          if (k === "description" && definition.hasOwnProperty(k)) {
+            // If we already have a more specific description, don't overwrite it.
+            continue;
+          }
+          (definition as DefinitionIndex)[k] =
+            schemas[0][k as keyof Definition];
         }
       }
     } else {
-      definition[unionModifier] = schemas;
+      (definition as DefinitionIndex)[unionModifier] = schemas;
     }
     return definition;
   }
@@ -1045,10 +1163,10 @@ export class JsonSchemaGenerator {
     intersectionType: ts.IntersectionType,
     definition: Definition
   ): Definition {
-    const simpleTypes: string[] = [];
+    const simpleTypes: JSONSchema7TypeName[] = [];
     const schemas: Definition[] = [];
 
-    const pushSimpleType = (type: string) => {
+    const pushSimpleType = (type: JSONSchema7TypeName) => {
       if (simpleTypes.indexOf(type) === -1) {
         simpleTypes.push(type);
       }
@@ -1056,19 +1174,15 @@ export class JsonSchemaGenerator {
 
     for (const intersectionMember of intersectionType.types) {
       const def = this.getTypeDefinition(intersectionMember);
-      if (def.type === "undefined") {
-        console.error("Undefined in intersection makes no sense.");
-      } else {
-        const keys = Object.keys(def);
-        if (keys.length === 1 && keys[0] === "type") {
-          if (typeof def.type !== "string") {
-            console.error("Expected only a simple type.");
-          } else {
-            pushSimpleType(def.type);
-          }
+      const keys = Object.keys(def);
+      if (keys.length === 1 && keys[0] === "type") {
+        if (typeof def.type !== "string") {
+          console.error("Expected only a simple type.");
         } else {
-          schemas.push(def);
+          pushSimpleType(def.type);
         }
+      } else {
+        schemas.push(def);
       }
     }
 
@@ -1081,7 +1195,8 @@ export class JsonSchemaGenerator {
     if (schemas.length === 1) {
       for (const k in schemas[0]) {
         if (schemas[0].hasOwnProperty(k)) {
-          definition[k] = schemas[0][k];
+          (definition as DefinitionIndex)[k] =
+            schemas[0][k as keyof Definition];
         }
       }
     } else {
@@ -1109,9 +1224,14 @@ export class JsonSchemaGenerator {
 
     const clazz = <ts.ClassDeclaration>node;
     const props = this.tc.getPropertiesOfType(clazzType).filter((prop) => {
-      // filter never
-      const propertyType = this.tc.getTypeOfSymbolAtLocation(prop, node);
-      if (ts.TypeFlags.Never === propertyType.getFlags()) {
+      // filter never and undefined
+      const propertyFlagType = this.tc
+        .getTypeOfSymbolAtLocation(prop, node)
+        .getFlags();
+      if (
+        ts.TypeFlags.Never === propertyFlagType ||
+        ts.TypeFlags.Undefined === propertyFlagType
+      ) {
         return false;
       }
       if (!this.args.excludePrivate) {
@@ -1122,20 +1242,12 @@ export class JsonSchemaGenerator {
       return !(
         decls &&
         decls.filter((decl) => {
-          if (
-            ts.isFunctionDeclaration(decl) ||
-            ts.isClassDeclaration(decl) ||
-            ts.isMethodDeclaration(decl)
-          ) {
-            const mods = decl.modifiers;
-            return (
-              mods &&
-              mods.filter((mod) => mod.kind === ts.SyntaxKind.PrivateKeyword)
-                .length > 0
-            );
-          }
-
-          return false;
+          const mods = (decl as any).modifiers;
+          return (
+            mods &&
+            mods.filter((mod: any) => mod.kind === ts.SyntaxKind.PrivateKeyword)
+              .length > 0
+          );
         }).length > 0
       );
     });
@@ -1179,19 +1291,46 @@ export class JsonSchemaGenerator {
             indexSymbol,
             node
           );
-          const isStringIndexed = indexType.flags === ts.TypeFlags.String;
-          if (indexType.flags !== ts.TypeFlags.Number && !isStringIndexed) {
+          const isIndexedObject =
+            indexType.flags === ts.TypeFlags.String ||
+            indexType.flags === ts.TypeFlags.Number;
+          if (indexType.flags !== ts.TypeFlags.Number && !isIndexedObject) {
             throw new Error(
               "Not supported: IndexSignatureDeclaration with index symbol other than a number or a string"
             );
           }
 
           const typ = this.tc.getTypeAtLocation(indexSignature.type!);
-          const def = this.getTypeDefinition(typ, undefined, "anyOf");
+          let def: Definition | undefined;
+          if (typ.flags & ts.TypeFlags.IndexedAccess) {
+            const targetName = ts.escapeLeadingUnderscores(
+              (<any>clazzType).mapper?.target?.value
+            );
+            const indexedAccessType = <ts.IndexedAccessType>typ;
+            const symbols: Map<ts.__String, ts.Symbol> = (<any>(
+              indexedAccessType.objectType
+            )).members;
+            const targetSymbol = symbols?.get(targetName);
 
-          if (isStringIndexed) {
+            if (targetSymbol) {
+              const targetNode = targetSymbol.getDeclarations()![0];
+              const targetDef = this.getDefinitionForProperty(
+                targetSymbol,
+                targetNode
+              );
+              if (targetDef) {
+                def = targetDef;
+              }
+            }
+          }
+          if (!def) {
+            def = this.getTypeDefinition(typ, undefined, "anyOf");
+          }
+          if (isIndexedObject) {
             definition.type = "object";
-            definition.additionalProperties = def;
+            if (!Object.keys(definition.patternProperties || {}).length) {
+              definition.additionalProperties = def;
+            }
           } else {
             definition.type = "array";
             if (!definition.items) {
@@ -1201,14 +1340,17 @@ export class JsonSchemaGenerator {
         }
       }
 
-      const propertyDefinitions = props.reduce((all, prop) => {
-        const propertyName = prop.getName();
-        const propDef = this.getDefinitionForProperty(prop, node);
-        if (propDef != null) {
-          all[propertyName] = propDef;
-        }
-        return all;
-      }, {});
+      const propertyDefinitions = props.reduce<Record<string, Definition>>(
+        (all, prop) => {
+          const propertyName = prop.getName();
+          const propDef = this.getDefinitionForProperty(prop, node);
+          if (propDef != null) {
+            all[propertyName] = propDef;
+          }
+          return all;
+        },
+        {}
+      );
 
       if (definition.type === undefined) {
         definition.type = "object";
@@ -1248,10 +1390,13 @@ export class JsonSchemaGenerator {
           (required: string[], prop: ts.Symbol) => {
             const def = {};
             this.parseCommentsIntoDefinition(prop, def, {});
+            const allUnionTypesFlags: number[] =
+              (<any>prop).links?.type?.types?.map?.((t: any) => t.flags) || [];
             if (
               !(prop.flags & ts.SymbolFlags.Optional) &&
               !(prop.flags & ts.SymbolFlags.Method) &&
-              !(<any>prop).mayBeUndefined &&
+              !allUnionTypesFlags.includes(ts.TypeFlags.Undefined) &&
+              !allUnionTypesFlags.includes(ts.TypeFlags.Void) &&
               !def.hasOwnProperty("ignore")
             ) {
               required.push(prop.getName());
@@ -1315,10 +1460,12 @@ export class JsonSchemaGenerator {
   private getTypeDefinition(
     typ: ts.Type,
     asRef = this.args.ref,
-    unionModifier: string = "anyOf",
+    unionModifier: keyof Definition = "anyOf",
     prop?: ts.Symbol,
     reffedType?: ts.Symbol,
-    pairedSymbol?: ts.Symbol
+    pairedSymbol?: ts.Symbol,
+    forceNotRef: boolean = false,
+    ignoreUndefined = false
   ): Definition {
     const definition: Definition = {}; // real definition
 
@@ -1347,23 +1494,31 @@ export class JsonSchemaGenerator {
 
     // Parse property comments now to skip recursive if ignore.
     if (prop) {
-      const defs = {};
+      const defs: Definition & { [k in MetaDefinitionFields]?: "" } = {};
       const others = {};
       this.parseCommentsIntoDefinition(prop, defs, others);
-      if (defs.hasOwnProperty("ignore")) {
+      if (defs.hasOwnProperty("ignore") || defs.hasOwnProperty("type")) {
         return defs;
       }
     }
 
     const symbol = typ.getSymbol();
     // FIXME: We can't just compare the name of the symbol - it ignores the namespace
-    const isRawType =
+    let isRawType =
       !symbol ||
       // Window is incorrectly marked as rawType here for some reason
       (this.tc.getFullyQualifiedName(symbol) !== "Window" &&
         (this.tc.getFullyQualifiedName(symbol) === "Date" ||
           symbol.name === "integer" ||
           this.tc.getIndexInfoOfType(typ, ts.IndexKind.Number) !== undefined));
+
+    if (
+      isRawType &&
+      (typ as any).aliasSymbol?.escapedName &&
+      (typ as any).types
+    ) {
+      isRawType = false;
+    }
 
     // special case: an union where all child are string literals -> make an enum instead
     let isStringEnum = false;
@@ -1430,7 +1585,7 @@ export class JsonSchemaGenerator {
 
     // Handle recursive types
     if (!isRawType || !!typ.aliasSymbol) {
-      if (this.recursiveTypeRef.has(fullTypeName)) {
+      if (this.recursiveTypeRef.has(fullTypeName) && !forceNotRef) {
         asRef = true;
       } else {
         this.recursiveTypeRef.set(fullTypeName, definition);
@@ -1446,7 +1601,7 @@ export class JsonSchemaGenerator {
     }
 
     // Parse comments
-    const otherAnnotations = {};
+    const otherAnnotations: Record<string, true> = {};
     this.parseCommentsIntoDefinition(reffedType!, definition, otherAnnotations); // handle comments in the type alias declaration
     this.parseCommentsIntoDefinition(symbol!, definition, otherAnnotations);
     this.parseCommentsIntoDefinition(
@@ -1470,8 +1625,12 @@ export class JsonSchemaGenerator {
     }
 
     // Create the actual definition only if is an inline definition, or
-    // if it will be a $ref and it is not yet created
-    if (!asRef || !this.reffedDefinitions[fullTypeName]) {
+    // if it will be a $ref and it is not yet created.
+    // Prioritise overrides.
+    const overrideDefinition = this.schemaOverrides.get(fullTypeName);
+    if (overrideDefinition) {
+      this.reffedDefinitions[fullTypeName] = overrideDefinition;
+    } else if (!asRef || !this.reffedDefinitions[fullTypeName]) {
       if (asRef) {
         // must be here to prevent recursivity problems
         let reffedDefinition: Definition;
@@ -1503,10 +1662,12 @@ export class JsonSchemaGenerator {
 
       if (definition.type === undefined) {
         // if users override the type, do not try to infer it
-        if (typ.flags & ts.TypeFlags.Union) {
+        if (
+          typ.flags & ts.TypeFlags.Union &&
+          (node === null || node.kind !== ts.SyntaxKind.EnumDeclaration)
+        ) {
           this.getUnionDefinition(
             typ as ts.UnionType,
-            prop!,
             unionModifier,
             definition
           );
@@ -1519,12 +1680,21 @@ export class JsonSchemaGenerator {
 
             const types = (<ts.IntersectionType>typ).types;
             for (const member of types) {
-              const other = this.getTypeDefinition(member, false);
+              const other = this.getTypeDefinition(
+                member,
+                false,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                true
+              );
               definition.type = other.type; // should always be object
               definition.properties = {
                 ...definition.properties,
                 ...other.properties,
               };
+
               if (Object.keys(other.default || {}).length > 0) {
                 definition.default = extend(
                   definition.default || {},
@@ -1547,7 +1717,13 @@ export class JsonSchemaGenerator {
           if (pairedSymbol) {
             this.parseCommentsIntoDefinition(pairedSymbol, definition, {});
           }
-          this.getDefinitionForRootType(typ, reffedType!, definition);
+          this.getDefinitionForRootType(
+            typ,
+            reffedType!,
+            definition,
+            undefined,
+            ignoreUndefined
+          );
         } else if (
           node &&
           (node.kind === ts.SyntaxKind.EnumDeclaration ||
@@ -1573,15 +1749,17 @@ export class JsonSchemaGenerator {
       this.recursiveTypeRef.delete(fullTypeName);
       // If the type was recursive (there is reffedDefinitions) - lets replace it to reference
       if (this.reffedDefinitions[fullTypeName]) {
-        const annotations = Object.entries(returnedDefinition).reduce(
-          (acc, [key, value]) => {
-            if (annotationKeywords[key] && typeof value !== undefined) {
-              acc[key] = value;
-            }
-            return acc;
-          },
-          {}
-        );
+        const annotations = Object.entries(returnedDefinition).reduce<
+          Record<string, unknown>
+        >((acc, [key, value]) => {
+          if (
+            annotationKeywords[key as keyof typeof annotationKeywords] &&
+            typeof value !== undefined
+          ) {
+            acc[key] = value;
+          }
+          return acc;
+        }, {});
 
         returnedDefinition = {
           $ref: `${this.args.id}#/definitions/` + fullTypeName,
@@ -1603,22 +1781,31 @@ export class JsonSchemaGenerator {
 
   public getSchemaForSymbol(
     symbolName: string,
-    includeReffedDefinitions: boolean = true
+    includeReffedDefinitions: boolean = true,
+    includeAllOverrides: boolean = false
   ): Definition {
-    if (!this.allSymbols[symbolName]) {
+    const overrideDefinition = this.schemaOverrides.get(symbolName);
+    if (!this.allSymbols[symbolName] && !overrideDefinition) {
       throw new Error(`type ${symbolName} not found`);
     }
 
-    this.resetSchemaSpecificProperties();
+    this.resetSchemaSpecificProperties(includeAllOverrides);
 
-    const def = this.getTypeDefinition(
-      this.allSymbols[symbolName],
-      this.args.topRef,
-      undefined,
-      undefined,
-      undefined,
-      this.userSymbols[symbolName] || undefined
-    );
+    let def;
+    if (overrideDefinition) {
+      def = { ...overrideDefinition };
+    } else {
+      def = overrideDefinition
+        ? overrideDefinition
+        : this.getTypeDefinition(
+            this.allSymbols[symbolName],
+            this.args.topRef,
+            undefined,
+            undefined,
+            undefined,
+            this.userSymbols[symbolName] || undefined
+          );
+    }
 
     if (
       this.args.ref &&
@@ -1637,14 +1824,19 @@ export class JsonSchemaGenerator {
 
   public getSchemaForSymbols(
     symbolNames: string[],
-    includeReffedDefinitions: boolean = true
+    includeReffedDefinitions: boolean = true,
+    includeAllOverrides: boolean = false
   ): Definition {
-    const root = {
+    const root: {
+      $id?: string;
+      $schema: string;
+      definitions: Record<string, Definition>;
+    } = {
       $schema: "http://json-schema.org/draft-07/schema#",
       definitions: {},
     };
 
-    this.resetSchemaSpecificProperties();
+    this.resetSchemaSpecificProperties(includeAllOverrides);
 
     const id = this.args.id;
 
@@ -1764,8 +1956,9 @@ export function buildGenerator(
 
   for (const pref in args) {
     if (args.hasOwnProperty(pref)) {
-      // @ts-ignore
-      settings[pref] = args[pref];
+      (settings as Record<string, Partial<Args>[keyof Args]>)[
+        pref as keyof Args
+      ] = args[pref as keyof Args];
     }
   }
 
@@ -1882,7 +2075,9 @@ export function generateSchema(
   if (fullTypeName === "*") {
     // All types in file(s)
     return generator.getSchemaForSymbols(
-      generator.getMainFileSymbols(program, onlyIncludeFiles)
+      generator.getMainFileSymbols(program, onlyIncludeFiles),
+      true,
+      true
     );
   } else if (args.uniqueNames) {
     // Find the hashed type name to use as the root object
@@ -1962,6 +2157,9 @@ export async function exec(
     program = getProgramFromFiles(onlyIncludeFiles, {
       strictNullChecks: args.strictNullChecks,
       esModuleInterop: args.esModuleInterop,
+      skipLibCheck: args.skipLibCheck,
+      emitDecoratorMetadata: args.experimentalDecorators,
+      experimentalDecorators: args.experimentalDecorators,
     });
     onlyIncludeFiles = onlyIncludeFiles.map(normalizeFileName);
   }
