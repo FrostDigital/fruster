@@ -133,14 +133,7 @@ function parseHandler(
           );
 
           if (DEBUG) {
-            const stringiedSchema = ts
-              .createPrinter()
-              .printNode(
-                ts.EmitHint.Unspecified,
-                reqSchema,
-                ts.createSourceFile("", "", ts.ScriptTarget.Latest)
-              );
-
+            const stringiedSchema = stringifyNode(reqSchema);
             debugLog(`Did set requestSchema ${stringiedSchema}`);
           }
         }
@@ -164,14 +157,7 @@ function parseHandler(
           );
 
           if (DEBUG) {
-            const stringiedSchema = ts
-              .createPrinter()
-              .printNode(
-                ts.EmitHint.Unspecified,
-                resSchema,
-                ts.createSourceFile("", "", ts.ScriptTarget.Latest)
-              );
-
+            const stringiedSchema = stringifyNode(resSchema);
             debugLog(`Did set responseSchema ${stringiedSchema}`);
           }
         }
@@ -334,6 +320,10 @@ function parseHandler(
       let queryDoc: ts.ObjectLiteralExpression | undefined;
 
       if (reqBodyTypeNode) {
+        if (DEBUG) {
+          const stringiedTypeNode = stringifyNode(reqBodyTypeNode);
+          debugLog(`Detected request schema type node ${stringiedTypeNode}`);
+        }
         reqSchema = getSchemaForType(program, checker, reqBodyTypeNode);
       }
 
@@ -346,6 +336,10 @@ function parseHandler(
       }
 
       if (resTypeNode) {
+        if (DEBUG) {
+          const stringiedTypeNode = stringifyNode(resTypeNode);
+          debugLog(`Detected response schema type node ${stringiedTypeNode}`);
+        }
         resSchema = getSchemaForType(program, checker, resTypeNode);
       }
 
@@ -523,4 +517,14 @@ function debugLog(msg: string) {
   if (DEBUG) {
     console.log("[FRUSTER TRANSFORMER]", msg);
   }
+}
+
+function stringifyNode(node: ts.Node) {
+  return ts
+    .createPrinter()
+    .printNode(
+      ts.EmitHint.Unspecified,
+      node,
+      ts.createSourceFile("", "", ts.ScriptTarget.Latest)
+    );
 }
