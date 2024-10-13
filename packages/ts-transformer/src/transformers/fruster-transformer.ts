@@ -132,7 +132,7 @@ function parseHandler(
             )
           );
 
-          debugLog(`Did set requestSchema`);
+          debugLog(`Did set requestSchema ${JSON.stringify(reqSchema || {})}`);
         }
       }
 
@@ -153,7 +153,7 @@ function parseHandler(
             )
           );
 
-          debugLog(`Did set responseSchema`);
+          debugLog(`Did set responseSchema ${JSON.stringify(resSchema || {})}`);
         }
       }
 
