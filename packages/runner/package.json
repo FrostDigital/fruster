@@ -1,6 +1,6 @@
 {
   "name": "@fruster/runner",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Runner used to run fruster services. Applies typescript transformations to parse schemas etc before service is started.",
   "homepage": "https://github.com/FrostDigital/fruster#readme",
   "license": "MIT",
@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@fruster/bus": "^1.1.0",
-    "@fruster/log": "^1.1.1",
+    "@fruster/log": "^1.1.2",
     "@fruster/ts-transformer": "^1.1.0",
     "ts-node": "^10.9.2",
     "typescript": "5.4.5",
