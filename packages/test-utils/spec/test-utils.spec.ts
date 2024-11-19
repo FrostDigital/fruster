@@ -64,7 +64,7 @@ if (!process.env.CI) {
 			testUtils.close(connection);
 		});
 
-		fdescribe("startBeforeEach", () => {
+		describe("startBeforeEach", () => {
 			/**
 			 * This spec is a bit awkward, but it's the only way to test the
 			 * `beforeStop` and `afterStart` hooks.
