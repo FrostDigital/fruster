@@ -63,6 +63,10 @@ export interface FrusterTestUtilsOptions {
 	 * Optional schema resolver.
 	 */
 	schemaResolver?: any;
+	/**
+	 * If to drop database after test is done.
+	 */
+	dropDatabase?: boolean;
 }
 
 export interface FrusterTestUtilsConnection {
@@ -124,18 +128,17 @@ function startBefore(
 			}
 		});
 
-		afterFn(() => {
-			let beforeStopPromise = Promise.resolve();
+		afterFn(async () => {
+			try {
+				if (options.beforeStop) {
+					await options.beforeStop(connection);
+				}
+			} catch (err) {
+				console.log("Failed beforeStop with error:", err);
+				fail();
+			}
 
-			if (options.beforeStop && typeof options.beforeStop === "function")
-				beforeStopPromise = Promise.resolve(
-					options.beforeStop(connection)
-				);
-
-			beforeStopPromise
-				.then(() => stop(connection, options))
-				.then()
-				.catch(fail);
+			await stop(connection, options);
 		});
 	});
 }
@@ -246,7 +249,7 @@ async function connectToMongo(
 			await client.connect();
 		} catch (e) {
 			console.log(
-				`Test uitls failed connecting to mongo on ${opts.mongoUrl}`,
+				`Test utils failed connecting to mongo on ${opts.mongoUrl}`,
 				e
 			);
 			throw e;
@@ -306,7 +309,7 @@ export async function startNatsServer(
 /**
  * Stop nats, close fruster bus connection(s) and drop database
  */
-export function stop(
+export async function stop(
 	connection: Partial<FrusterTestUtilsConnection>,
 	options?: FrusterTestUtilsOptions
 ) {
@@ -324,25 +327,17 @@ export function stop(
 		}
 	}
 
-	if (connection.db) {
-		// First drop collection, then delete database to be on the safe side
-		// At some occasions data is not deleted if just doing one of those
-		return connection.db.collections().then((colls) => {
-			let dropCollections = colls.map((coll) => {
-				if (coll.namespace.includes("system")) {
-					return Promise.resolve();
-				}
-				coll.drop().catch(() => {
-					/* fail quietly */
-				});
-			});
-			return Promise.all(dropCollections)
-				.then(() => connection.db?.dropDatabase())
-				.then(() => connection.client?.close());
-		});
-	}
+	if (connection.client) {
+		if (options?.dropDatabase) {
+			try {
+				await connection.db?.dropDatabase();
+			} catch (e) {
+				console.log("Failed dropping database", e);
+			}
+		}
 
-	return Promise.resolve();
+		await connection.client?.close();
+	}
 }
 
 // Alias for stop
