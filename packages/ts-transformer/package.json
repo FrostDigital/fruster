@@ -1,6 +1,6 @@
 {
   "name": "@fruster/ts-transformer",
-  "version": "1.1.0",
+  "version": "1.2.0-alpha.0",
   "description": "",
   "main": "dist/transformers/fruster-transformer.js",
   "scripts": {
@@ -21,7 +21,7 @@
     "uuid": "^8.3.2"
   },
   "devDependencies": {
-    "@fruster/bus": "^1.1.0",
+    "@fruster/bus": "^1.2.0-alpha.0",
     "@types/jest": "^27.4.1",
     "@types/json-schema": "^7.0.9",
     "@types/minimatch": "^3.0.5",
