@@ -16,6 +16,15 @@
 
 
 
+# [](https://github.com/FrostDigital/fruster/compare/v1.2.0-alpha.0...v) (2025-11-18)
+
+
+### Features
+
+* add subscription management to MockService ([30fa918](https://github.com/FrostDigital/fruster/commit/30fa9184e4af197af86db31840e310ce0e84135f))
+
+
+
 # [1.2.0-alpha.0](https://github.com/FrostDigital/fruster/compare/v1.1.2...v1.2.0-alpha.0) (2025-04-09)
 
 
