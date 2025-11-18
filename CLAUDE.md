@@ -214,6 +214,44 @@ npm run changelog
 npm run changelog:first
 ```
 
+**Pre-release Workflow:**
+
+For alpha, beta, or release candidate versions:
+
+```bash
+# Create a pre-release version
+npx lerna@4 version prerelease
+# Example: 1.2.0-alpha.0 -> 1.2.0-alpha.1
+
+# Or create pre-release from stable version
+npx lerna@4 version preminor --preid=alpha
+# Example: 1.2.0 -> 1.3.0-alpha.0
+
+# Publish with dist-tag to prevent auto-install
+npx lerna@4 publish from-git --dist-tag next
+# Users install with: npm install @fruster/bus@next
+```
+
+**Pre-release Version Commands:**
+
+- `prerelease` - Bump pre-release version (1.2.0-alpha.0 → 1.2.0-alpha.1)
+- `prepatch --preid=alpha` - 1.2.0 → 1.2.1-alpha.0
+- `preminor --preid=alpha` - 1.2.0 → 1.3.0-alpha.0
+- `premajor --preid=alpha` - 1.2.0 → 2.0.0-alpha.0
+
+**Common preid values:** `alpha`, `beta`, `rc` (release candidate)
+
+**Graduating Pre-release to Stable:**
+
+```bash
+# Bump from pre-release to stable
+npx lerna@4 version patch
+# Example: 1.2.0-alpha.5 -> 1.2.0
+
+# Publish as latest (default dist-tag)
+npx lerna@4 publish from-git
+```
+
 All packages have `"publishConfig": { "access": "public" }` for npm registry.
 
 ## Key Files and Patterns
