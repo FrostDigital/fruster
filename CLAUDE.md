@@ -159,10 +159,59 @@ Testing utilities in `@fruster/test-utils`:
 
 ### Publishing Packages
 
-Packages use Lerna for publishing and are scoped to `@fruster/*`:
+Packages use Lerna for publishing and are scoped to `@fruster/*`.
+
+**Automated Changelog Generation:**
+
+This repository uses [conventional-changelog-cli](https://github.com/conventional-changelog/conventional-changelog) to automatically generate changelogs from git commit history. The team follows [Conventional Commits](https://www.conventionalcommits.org/) format.
+
+**Publishing Workflow:**
 
 ```bash
-npx lerna@4 publish
+# 1. Version bump (automatically generates changelog)
+npx lerna@4 version [major|minor|patch|prerelease]
+# This runs the 'version' script which:
+# - Generates/updates CHANGELOG.md based on commits since last version
+# - Commits the changelog and package.json changes
+# - Creates a git tag
+
+# 2. Publish to npm
+npx lerna@4 publish from-git
+# This publishes all packages with the new version tag
+# The 'postpublish' script automatically pushes tags to GitHub
+```
+
+**Commit Message Format:**
+
+Follow Conventional Commits format for proper changelog generation:
+
+- `feat: description` - New features (appears in changelog)
+- `fix: description` - Bug fixes (appears in changelog)
+- `docs: description` - Documentation changes
+- `chore: description` - Maintenance tasks
+- `refactor: description` - Code refactoring
+- `test: description` - Test changes
+- `style: description` - Code style changes
+- `perf: description` - Performance improvements
+
+**Breaking Changes:**
+
+Include `BREAKING CHANGE:` in the commit body for major version bumps:
+
+```
+feat: new API design
+
+BREAKING CHANGE: Old API methods have been removed
+```
+
+**Manual Changelog Operations:**
+
+```bash
+# Generate changelog for unreleased commits
+npm run changelog
+
+# Regenerate entire changelog from git history
+npm run changelog:first
 ```
 
 All packages have `"publishConfig": { "access": "public" }` for npm registry.

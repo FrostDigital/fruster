@@ -5,9 +5,14 @@
     "test": "lerna exec -- npm run test",
     "install": "lerna exec -- npm install && lerna bootstrap",
     "clean": "lerna exec -- npm run clean",
-    "audit:high": "lerna exec -- npm audit --audit-level=high"
+    "audit:high": "lerna exec -- npm audit --audit-level=high",
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
+    "changelog:first": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0",
+    "version": "npm run changelog && git add CHANGELOG.md",
+    "postpublish": "git push --follow-tags"
   },
   "devDependencies": {
+    "conventional-changelog-cli": "^5.0.0",
     "lerna": "^4.0.0"
   },
   "repository": {
