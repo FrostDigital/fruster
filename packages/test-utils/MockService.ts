@@ -44,6 +44,15 @@ export interface MockServiceOpts<T> {
 	 * Either `response` or `responses` must be set!
 	 */
 	responses?: MockedResponse<T>[];
+
+	/**
+	 * If true, automatically unsubscribe after the first response is sent.
+	 * Useful for one-shot mocks in complex flows.
+	 *
+	 * When using `responses` array, the mock will automatically unsubscribe
+	 * after all responses have been sent regardless of this option.
+	 */
+	autoUnsubscribe?: boolean;
 }
 
 class MockService<T> {
@@ -53,6 +62,8 @@ class MockService<T> {
 	response?: MockedResponse<T>;
 	responses?: MockedResponse<T>[];
 	publishedResponses: any[] = [];
+	autoUnsubscribe: boolean;
+	private subscription?: any;
 
 	constructor(opts: MockServiceOpts<T>) {
 		this.subject = opts.subject;
@@ -60,6 +71,7 @@ class MockService<T> {
 		this.response = opts.response;
 		this.responses = opts.responses;
 		this.publishedResponses = [];
+		this.autoUnsubscribe = opts.autoUnsubscribe || false;
 		this.subscribe();
 
 		if (!this.responses && !this.response)
@@ -74,7 +86,7 @@ class MockService<T> {
 	}
 
 	private subscribe() {
-		this.bus.subscribe({
+		this.subscription = this.bus.subscribe({
 			subject: this.subject,
 			// @ts-ignore: Fruster bus is missing TestFrusterResonse in testBus
 			handle: this.handleReq,
@@ -83,8 +95,19 @@ class MockService<T> {
 
 	private handleReq = (req: TestFrusterRequest<any>) => {
 		this.requests.push(req);
-		const response = this.getResponse(req, this.requests.length - 1);
+		const reqIndex = this.requests.length - 1;
+		const response = this.getResponse(req, reqIndex);
 		this.publishedResponses.push(response);
+
+		// Auto-unsubscribe logic
+		if (this.autoUnsubscribe) {
+			// Unsubscribe after first response when autoUnsubscribe is enabled
+			this.unsubscribe();
+		} else if (this.responses && reqIndex === this.responses.length - 1) {
+			// When using responses array, auto-unsubscribe after last response
+			this.unsubscribe();
+		}
+
 		return response;
 	};
 
@@ -126,6 +149,47 @@ class MockService<T> {
 		invokedResponse.status = invokedResponse.status || 200;
 
 		return invokedResponse;
+	}
+
+	/**
+	 * Unsubscribe from the subject. After calling this, the mock will no longer
+	 * handle requests. This is useful for replacing mocks in complex test flows.
+	 * Safe to call multiple times.
+	 */
+	unsubscribe() {
+		if (this.subscription) {
+			this.subscription.unsubscribe();
+			this.subscription = undefined;
+		}
+	}
+
+	/**
+	 * Update the response for this mock. Useful for dynamically changing mock behavior.
+	 * @param response New response to return (static or function)
+	 */
+	setResponse(response: MockedResponse<T>) {
+		if (this.responses) {
+			throw new Error(
+				"Cannot call setResponse() when using responses array. Use setResponses() instead."
+			);
+		}
+		this.response = response;
+	}
+
+	/**
+	 * Update the responses array for this mock. Resets the request counter.
+	 * @param responses New array of responses
+	 */
+	setResponses(responses: MockedResponse<T>[]) {
+		if (this.response && !this.responses) {
+			throw new Error(
+				"Cannot call setResponses() when using single response. Use setResponse() instead."
+			);
+		}
+		this.responses = responses;
+		// Reset counters when updating responses
+		this.requests = [];
+		this.publishedResponses = [];
 	}
 
 	/**
