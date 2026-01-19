@@ -6,6 +6,8 @@
   "private": false,
   "types": "fruster-log.d.ts",
   "scripts": {
+    "build": "echo \"No build needed (JavaScript)\"",
+    "watch": "echo \"No watch needed (JavaScript)\"",
     "test": "node ./spec/support/jasmine-runner.js",
     "clean": "echo \"nothing to clean\""
   },
@@ -26,7 +28,7 @@
     "winston-papertrail": "^1.0.5"
   },
   "devDependencies": {
-    "@fruster/test-utils": "^1.2.0-alpha.1",
+    "@fruster/test-utils": "workspace:*",
     "@types/jasmine": "^2.8.5",
     "jasmine": "^2.4.1",
     "jasmine-spec-reporter": "^2.7.0"

@@ -2,6 +2,13 @@
 node_modules
 npm-debug.log
 
+# Lock files
+package-lock.json
+pnpm-lock.yaml
+
+# Changesets - commit changeset files in PRs, they get deleted during version bump
+# Only ignore the README if needed, but keep all changeset descriptions
+# .changeset/*.md files should be committed!
 
 # Logs
 logs
@@ -71,3 +78,6 @@ typings/
 dist/
 
 .claude
+
+# Reference monorepo (symlink)
+flink-mono-repo-for-reference-only
