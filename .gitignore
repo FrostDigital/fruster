@@ -4,7 +4,7 @@ npm-debug.log
 
 # Lock files
 package-lock.json
-pnpm-lock.yaml
+# pnpm-lock.yaml should be committed for reproducible builds
 
 # Changesets - commit changeset files in PRs, they get deleted during version bump
 # Only ignore the README if needed, but keep all changeset descriptions
