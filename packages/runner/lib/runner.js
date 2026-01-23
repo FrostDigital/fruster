@@ -81,6 +81,10 @@ function main(args) {
       transformers,
     });
 
+    // Preserve additional arguments after entry file for the script to use
+    // Remove node, fruster-runner, and entry file from argv
+    process.argv = [process.argv[0], entryFile, ...args.slice(3)];
+
     require(path.join(process.cwd(), entryFile));
   }
 }
