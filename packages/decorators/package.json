@@ -13,6 +13,7 @@
 	],
 	"scripts": {
 		"build": "tsc",
+		"watch": "tsc --watch",
 		"prepublish": "npm run build",
 		"clean": "rimraf ./dist",
 		"test": "echo \"Error: no test specified\""
@@ -22,12 +23,8 @@
 		"uuid": "^8.3.2"
 	},
 	"devDependencies": {
-		"@fruster/bus": "^1.2.0-alpha.0",
-		"@types/node": "14.0.27",
-		"rimraf": "^5.0.5",
-		"ts-node": "^10.7.0",
-		"ts-node-dev": "^2.0.0",
-		"typescript": "5.4.5"
+		"@fruster/bus": "workspace:*",
+		"ts-node-dev": "^2.0.0"
 	},
 	"gitHead": "7c359ee220f40917b50ad0e52fd4191e9830d141"
 }

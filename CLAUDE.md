@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Fruster is a framework for building Node.js microservices with NATS message bus integration. This is a Lerna-managed monorepo containing multiple packages that work together to provide a complete microservice framework.
+Fruster is a framework for building Node.js microservices with NATS message bus integration. This is a pnpm workspace monorepo containing multiple packages that work together to provide a complete microservice framework.
 
 ## Repository Structure
 
-This is a Lerna monorepo with the following key packages in `packages/`:
+This is a pnpm workspace monorepo with the following key packages in `packages/`:
 
 - **@fruster/bus** - Core NATS message bus client with request/response patterns, publish/subscribe, JSON schema validation, and metadata handling
 - **@fruster/decorators** - TypeScript decorators (`@injectable`, `@subscribe`, `@inject`) for dependency injection and message handling
@@ -23,40 +23,62 @@ This is a Lerna monorepo with the following key packages in `packages/`:
 
 ### Setup and Installation
 ```bash
-# Bootstrap all packages and link dependencies
-npx lerna@4 bootstrap
+# Install pnpm (via corepack, built into Node.js)
+corepack enable
+corepack prepare pnpm@10.27.0 --activate
 
 # Install dependencies for all packages
-npm run install
+# Note: This automatically builds all packages via postinstall hook
+pnpm install
+# or
+pnpm run setup
+
+# Clean install (removes all node_modules and reinstalls)
+pnpm run setup:clean
 ```
+
+**Important:** `pnpm install` automatically runs `pnpm run build` via a postinstall hook. This ensures all packages are built in topological (dependency) order. Packages like `@fruster/runner` and `demo-app` require dependencies to be built first since they import from `dist/` directories.
 
 ### Testing
 ```bash
 # Run tests for all packages
-npx lerna@4 run test
-# or
-npm test
+pnpm test
+
+# Run tests only for packages changed since last commit
+pnpm test:changed
 
 # Run tests in a specific package
-cd packages/bus && npm test
+cd packages/bus && pnpm test
 
 # Run tests in watch mode (in packages that support it)
-npm run test:watch
+cd packages/demo-app && pnpm run test:watch
 ```
 
 ### Building
 ```bash
-# Build all packages
-npx lerna@4 run build
+# Build all packages in topological (dependency) order
+# pnpm automatically builds: bus, decorators, ts-transformer, log first
+# Then: test-utils, health, runner
+# Finally: demo-app
+pnpm run build
+
+# Build only packages changed since last commit
+pnpm run build:changed
 
 # Build a specific package
-cd packages/bus && npm run build
+cd packages/bus && pnpm run build
+
+# Watch and rebuild packages automatically
+pnpm run watch
 
 # Clean build artifacts
-npm run clean
-# or
-npx lerna@4 run clean
+pnpm run clean
+
+# Clean everything (node_modules + build artifacts)
+pnpm run clean:all
 ```
+
+**Build Order:** pnpm's `-r` (recursive) flag automatically handles topological sorting. Core packages without internal dependencies build first, followed by packages that depend on them. This ensures `@fruster/runner` can import from `@fruster/ts-transformer/dist/`, and `demo-app` has all dependencies built.
 
 ### Running the Demo App
 ```bash
@@ -64,13 +86,13 @@ npx lerna@4 run clean
 docker run --name nats --network nats --rm -p 4222:4222
 
 # Run demo app in development mode (auto-restart)
-cd packages/demo-app && npm run dev
+cd packages/demo-app && pnpm run dev
 
 # Run demo app normally
-cd packages/demo-app && npm start
+cd packages/demo-app && pnpm start
 
 # Build and run demo app
-cd packages/demo-app && npm run build && npm run start:dist
+cd packages/demo-app && pnpm run build && pnpm run start:dist
 ```
 
 ### Development
@@ -85,7 +107,7 @@ fruster-runner ./app.ts --build
 ### Auditing
 ```bash
 # Audit high severity vulnerabilities across all packages
-npm run audit:high
+pnpm run audit:high
 ```
 
 ## Architecture
@@ -159,27 +181,49 @@ Testing utilities in `@fruster/test-utils`:
 
 ### Publishing Packages
 
-Packages use Lerna for publishing and are scoped to `@fruster/*`.
+Packages use Changesets for versioning/publishing and are scoped to `@fruster/*`.
 
 **Automated Changelog Generation:**
 
-This repository uses [conventional-changelog-cli](https://github.com/conventional-changelog/conventional-changelog) to automatically generate changelogs from git commit history. The team follows [Conventional Commits](https://www.conventionalcommits.org/) format.
+This repository uses [Changesets](https://github.com/changesets/changesets) to manage versioning and changelog generation. The team follows [Conventional Commits](https://www.conventionalcommits.org/) format for commit messages.
 
 **Publishing Workflow:**
 
 ```bash
-# 1. Version bump (automatically generates changelog)
-npx lerna@4 version [major|minor|patch|prerelease]
-# This runs the 'version' script which:
-# - Generates/updates CHANGELOG.md based on commits since last version
-# - Commits the changelog and package.json changes
-# - Creates a git tag
+# 1. Create a changeset (during development, in your PR)
+pnpm changeset
+# This interactive CLI will:
+# - Ask which packages have changed
+# - Ask whether changes are major, minor, or patch
+# - Request a description of the changes
 
-# 2. Publish to npm
-npx lerna@4 publish from-git
-# This publishes all packages with the new version tag
-# The 'postpublish' script automatically pushes tags to GitHub
+# 2. Version bump (maintainers only, on main branch)
+pnpm run version-packages
+# This runs 'changeset version' which:
+# - Updates package.json versions
+# - Generates/updates CHANGELOG.md files
+# - Updates workspace dependencies automatically
+# - Removes processed changeset files
+
+# 3. Commit version changes
+git add .
+git commit -m "chore: version packages"
+git push
+
+# 4. Publish to npm (maintainers only)
+pnpm run release
+# This runs 'pnpm run build && changeset publish' which:
+# - Builds all packages
+# - Publishes packages to npm
+# - Creates git tags
 ```
+
+**Automatic Dependency Bumping:**
+
+When a package is updated, Changesets automatically bumps all dependent packages:
+- If `@fruster/bus` gets a patch bump, all packages depending on it also get a patch bump
+- Dependencies in package.json are automatically updated to the new versions
+- This ensures the monorepo stays in sync
 
 **Commit Message Format:**
 
@@ -196,22 +240,13 @@ Follow Conventional Commits format for proper changelog generation:
 
 **Breaking Changes:**
 
-Include `BREAKING CHANGE:` in the commit body for major version bumps:
-
-```
-feat: new API design
-
-BREAKING CHANGE: Old API methods have been removed
-```
-
-**Manual Changelog Operations:**
+When creating a changeset for breaking changes, select "major" as the bump type:
 
 ```bash
-# Generate changelog for unreleased commits
-npm run changelog
-
-# Regenerate entire changelog from git history
-npm run changelog:first
+pnpm changeset
+# Select packages
+# Choose "major" for breaking changes
+# Describe the breaking change in detail
 ```
 
 **Pre-release Workflow:**
@@ -219,40 +254,43 @@ npm run changelog:first
 For alpha, beta, or release candidate versions:
 
 ```bash
-# Create a pre-release version
-npx lerna@4 version prerelease
-# Example: 1.2.0-alpha.0 -> 1.2.0-alpha.1
+# 1. Create changesets as normal during development
+pnpm changeset
 
-# Or create pre-release from stable version
-npx lerna@4 version preminor --preid=alpha
-# Example: 1.2.0 -> 1.3.0-alpha.0
+# 2. Enter pre-release mode
+pnpm changeset pre enter alpha
+# This puts the monorepo in pre-release mode
 
-# Publish with dist-tag to prevent auto-install
-npx lerna@4 publish from-git --dist-tag next
-# Users install with: npm install @fruster/bus@next
+# 3. Version packages
+pnpm run version-packages
+# Versions will be like: 1.3.0-alpha.0
+
+# 4. Publish with pre-release tag
+pnpm run release --tag next
+# Users install with: pnpm add @fruster/bus@next
+
+# 5. Exit pre-release mode when ready for stable release
+pnpm changeset pre exit
+pnpm run version-packages  # Creates stable versions
+pnpm run release          # Publishes as latest
 ```
 
-**Pre-release Version Commands:**
-
-- `prerelease` - Bump pre-release version (1.2.0-alpha.0 → 1.2.0-alpha.1)
-- `prepatch --preid=alpha` - 1.2.0 → 1.2.1-alpha.0
-- `preminor --preid=alpha` - 1.2.0 → 1.3.0-alpha.0
-- `premajor --preid=alpha` - 1.2.0 → 2.0.0-alpha.0
-
-**Common preid values:** `alpha`, `beta`, `rc` (release candidate)
-
-**Graduating Pre-release to Stable:**
-
-```bash
-# Bump from pre-release to stable
-npx lerna@4 version patch
-# Example: 1.2.0-alpha.5 -> 1.2.0
-
-# Publish as latest (default dist-tag)
-npx lerna@4 publish from-git
-```
+**Common pre-release identifiers:** `alpha`, `beta`, `rc` (release candidate)
 
 All packages have `"publishConfig": { "access": "public" }` for npm registry.
+
+**Workspace Protocol:**
+
+During development, packages use `workspace:*` for internal dependencies:
+```json
+{
+  "dependencies": {
+    "@fruster/bus": "workspace:*"
+  }
+}
+```
+
+During publish, Changesets automatically converts these to actual version numbers (e.g., `^1.2.0`).
 
 ## Key Files and Patterns
 

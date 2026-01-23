@@ -26,9 +26,9 @@
     "url": "https://github.com/FrostDigital/fruster/issues"
   },
   "dependencies": {
-    "@fruster/bus": "^1.2.0-alpha.0",
-    "@fruster/log": "^1.2.0-alpha.1",
-    "@fruster/ts-transformer": "^1.2.0-alpha.0",
+    "@fruster/bus": "workspace:*",
+    "@fruster/log": "workspace:*",
+    "@fruster/ts-transformer": "workspace:*",
     "ts-node": "^10.9.2",
     "typescript": "5.4.5",
     "uuid": "^8.3.2"

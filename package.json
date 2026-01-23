@@ -1,19 +1,29 @@
 {
   "name": "root",
   "private": true,
+  "packageManager": "pnpm@10.27.0",
   "scripts": {
-    "test": "lerna exec -- npm run test",
-    "install": "lerna exec -- npm install && lerna bootstrap",
-    "clean": "lerna exec -- npm run clean",
-    "audit:high": "lerna exec -- npm audit --audit-level=high",
-    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
-    "changelog:first": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0",
-    "version": "npm run changelog && git add CHANGELOG.md",
-    "postpublish": "git push --follow-tags"
+    "postinstall": "pnpm run build",
+    "setup": "pnpm install",
+    "setup:clean": "pnpm run clean:all && pnpm run setup",
+    "build": "pnpm -r run build",
+    "build:changed": "pnpm --filter=\"...[HEAD^1]\" run build",
+    "test": "pnpm -r run test",
+    "test:changed": "pnpm --filter=\"...[HEAD^1]\" run test",
+    "watch": "pnpm -r --parallel run watch",
+    "clean": "pnpm -r --parallel run clean",
+    "clean:all": "pnpm -r exec -- rm -rf node_modules dist && rm -rf node_modules",
+    "audit:high": "pnpm audit --audit-level high",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm run build && changeset publish"
   },
   "devDependencies": {
-    "conventional-changelog-cli": "^5.0.0",
-    "lerna": "^4.0.0"
+    "@changesets/cli": "^2.27.12",
+    "@types/node": "^20.12.12",
+    "rimraf": "^6.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "5.4.5"
   },
   "repository": {
     "type": "git",

@@ -8,6 +8,7 @@
 	"scripts": {
 		"test": "nyc --reporter=html --check-coverage --lines 90 ts-node --transpile-only ./spec/support/jasmine-runner.ts",
 		"build": "rimraf ./dist && tsc --project tsconfig.dist.json",
+		"watch": "tsc --watch --project tsconfig.dist.json",
 		"prepublish": "npm run build",
 		"clean": "rimraf ./dist"
 	},
@@ -35,15 +36,11 @@
 		"@types/jasmine": "^3.10.2",
 		"@types/lodash": "^4.14.177",
 		"@types/ms": "^0.7.31",
-		"@types/node": "^16.11.10",
 		"@types/uuid": "^8.3.3",
 		"body-parser": "^1.19.0",
 		"jasmine": "^3.10.0",
 		"jasmine-spec-reporter": "^7.0.0",
-		"nyc": "^15.1.0",
-		"rimraf": "^5.0.5",
-		"ts-node": "^10.9.2",
-		"typescript": "5.4.5"
+		"nyc": "^15.1.0"
 	},
 	"repository": {
 		"type": "git",

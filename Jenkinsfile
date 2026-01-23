@@ -22,14 +22,14 @@ pipeline {
         }		
 
         stage('Build and test') {
-            
+
             steps {
-                script {        
-                    sh "export CI=1"     
-                    sh "npm install lerna@4 -D"      
-                    sh "npm run clean"
-                    sh "npm install"
-                    sh "npm test"
+                script {
+                    sh "export CI=1"
+                    sh "corepack enable"
+                    sh "corepack prepare pnpm@10.27.0 --activate"
+                    sh "pnpm install --frozen-lockfile"
+                    sh "pnpm test"
                 }
             }
         }
