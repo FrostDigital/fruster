@@ -1,5 +1,13 @@
 # @fruster/test-utils
 
+## 1.2.0-alpha.3
+
+### Patch Changes
+
+- Fix workspace protocol in published packages
+- Updated dependencies
+  - @fruster/bus@1.2.0-alpha.2
+
 ## 1.2.0-alpha.2
 
 ### Patch Changes

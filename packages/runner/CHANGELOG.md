@@ -1,5 +1,15 @@
 # @fruster/runner
 
+## 1.2.0-alpha.3
+
+### Patch Changes
+
+- Fix workspace protocol in published packages
+- Updated dependencies
+  - @fruster/bus@1.2.0-alpha.2
+  - @fruster/log@1.2.0-alpha.3
+  - @fruster/ts-transformer@1.2.0-alpha.2
+
 ## 1.2.0-alpha.2
 
 ### Minor Changes

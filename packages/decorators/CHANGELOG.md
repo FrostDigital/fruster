@@ -1,5 +1,11 @@
 # @fruster/decorators
 
+## 1.2.0-alpha.2
+
+### Patch Changes
+
+- Fix workspace protocol in published packages
+
 ## 1.2.0-alpha.1
 
 ### Patch Changes
