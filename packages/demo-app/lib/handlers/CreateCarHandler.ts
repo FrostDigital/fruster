@@ -20,23 +20,14 @@ export interface CreateCarRequest {
 @injectable()
 class CreateCarHandler {
   @inject()
-  carRepo?: CarRepo;
+  carRepo!: CarRepo;
 
   @subscribe({
     subject: "demo-service.create-car",
   })
-  async handle(req: FrusterRequest<CreateCarRequest>): Promise<FrusterResponse<Car>> {
-    if (!this.carRepo) {
-      return {
-        status: 500,
-        data: {
-          id: "",
-          brand: "",
-          model: "",
-        },
-      };
-    }
-
+  async handle(
+    req: FrusterRequest<CreateCarRequest>,
+  ): Promise<FrusterResponse<Car>> {
     const car = await this.carRepo.create({
       id: uuid.v4(),
       brand: req.data.brand,
