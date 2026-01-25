@@ -2,6 +2,53 @@
 
 Utils for jasmine tests.
 
+## NATS Server Support (Optional)
+
+The test-utils package uses the NATS server for testing, but does not include NATS as a dependency. If you need NATS support in your tests:
+
+### Installation
+
+Install NATS server from [the official installation guide](https://docs.nats.io/running-a-nats-service/introduction/installation):
+
+**macOS:**
+```bash
+brew install nats-server
+```
+
+**Linux:**
+```bash
+curl -L https://github.com/nats-io/nats-server/releases/download/v2.10.7/nats-server-v2.10.7-linux-amd64.zip -o nats-server.zip
+unzip nats-server.zip -d nats-server
+sudo cp nats-server/nats-server-v2.10.7-linux-amd64/nats-server /usr/local/bin
+```
+
+**Windows:**
+```bash
+choco install nats-server
+```
+
+### Error Handling
+
+If you use test utilities that require NATS without installing the NATS server, you'll receive a helpful error message:
+
+```
+NATS server is not installed or not in PATH.
+Install it from https://docs.nats.io/running-a-nats-service/introduction/installation
+or use mockNats: true option for in-memory testing.
+```
+
+### Using Mock NATS
+
+For tests that don't require a real NATS server, you can use the in-memory mock:
+
+```javascript
+testUtils.startBeforeEach({
+	service: service,
+	bus: bus,
+	mockNats: true  // Use in-memory NATS instead of real server
+});
+```
+
 ## Start and stop a service beforeEach/beforeAll
 
 Convenient method to start nats, connect bus, optionally connect to MongoDB, and start a service before each or all tests.

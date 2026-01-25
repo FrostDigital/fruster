@@ -418,6 +418,23 @@ async function connectBus(
 	return connection;
 }
 
+/**
+ * Check if NATS server is available on the system
+ */
+export function isNatsServerAvailable(): boolean {
+	const { spawnSync } = require("child_process");
+	const natsServerBinary = process.env.GNATSD || "nats-server";
+
+	try {
+		const result = spawnSync(natsServerBinary, ["--version"], {
+			stdio: "ignore",
+		});
+		return result.status === 0;
+	} catch {
+		return false;
+	}
+}
+
 export async function startNatsServer(
 	opts?: Pick<FrusterTestUtilsOptions, "natsPort" | "bus">
 ) {
@@ -435,10 +452,38 @@ export async function startNatsServer(
 		natsClient: undefined,
 	};
 
+	// Set environment variable to use modern nats-server binary
+	if (!process.env.GNATSD) {
+		process.env.GNATSD = "nats-server";
+	}
+
+	// Check if NATS server is available
+	if (!isNatsServerAvailable()) {
+		const error = new Error(
+			"NATS server is not installed or not in PATH. " +
+			"Install it from https://docs.nats.io/running-a-nats-service/introduction/installation " +
+			"or use mockNats: true option for in-memory testing."
+		);
+		(error as any).code = "NATS_NOT_INSTALLED";
+		throw error;
+	}
+
 	try {
 		connection.server = await nsc.startServer(natsServerPort);
 		return connection;
-	} catch (err) {
+	} catch (err: any) {
+		// Provide helpful error message for missing NATS server
+		if (err.message && err.message.includes("Can't find the")) {
+			const enhancedError = new Error(
+				"NATS server binary not found. " +
+				"Install NATS server from https://docs.nats.io/running-a-nats-service/introduction/installation " +
+				"or use mockNats: true option for in-memory testing. " +
+				"Original error: " + err.message
+			);
+			(enhancedError as any).code = "NATS_NOT_INSTALLED";
+			throw enhancedError;
+		}
+
 		console.log(`Failed starting NATS server on port ${anAvailablePort}`);
 		throw err;
 	}
@@ -533,6 +578,7 @@ const TestUtils = {
 	stop,
 	close,
 	startNatsServer,
+	isNatsServerAvailable,
 	startBeforeEach,
 	startBeforeAll,
 	mockService,

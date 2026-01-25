@@ -1,5 +1,5 @@
 import bus from "../index";
-import { startNatsServerAndConnectBus, TestConnection } from "./support/test-utils";
+import { startNatsServerAndConnectBus, TestConnection, skipIfNatsNotAvailable } from "./support/test-utils";
 import * as uuid from "uuid";
 import path from "path";
 import { spawn } from "child_process";
@@ -7,6 +7,9 @@ import { spawn } from "child_process";
 jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
 
 describe("Queue group", function () {
+	// Skip if NATS server is not installed
+	if (skipIfNatsNotAvailable()) return;
+
 	if (process.env.CI) {
 		// TODO: Find out why this test is failing on Jenkins, but works fine locally
 		console.log("WARNING: Skipping test (for now)");
@@ -86,11 +89,15 @@ describe("Queue group", function () {
 function spawnClient(natsPort: number, subject: string, createQueueGroup: boolean, cb: (gotMessage: boolean) => void) {
 	const clientPath = path.join(__dirname, "support", "test-client.ts");
 
-	let spawned = spawn(path.join("node_modules", ".bin", "ts-node"), [clientPath], {
-		env: Object.assign(process.env, {
-			PORT: natsPort,
+	// Look for ts-node in workspace root (pnpm monorepo structure)
+	const workspaceRoot = path.join(__dirname, "..", "..", "..");
+	const tsNodePath = path.join(workspaceRoot, "node_modules", ".bin", "ts-node");
+
+	let spawned = spawn(tsNodePath, [clientPath], {
+		env: Object.assign({}, process.env, {
+			PORT: natsPort.toString(),
 			SUBJECT: subject,
-			CREATE_QUEUE_GROUP: createQueueGroup,
+			CREATE_QUEUE_GROUP: createQueueGroup.toString(),
 		}),
 	});
 

@@ -57,8 +57,10 @@ describe("Before jasmine test convenient method", () => {
 		});
 	});
 
-	describe("beforeAll with mongo db", () => {
+	describe("beforeAll with in-memory MongoDB", () => {
 		let mongoDbAvailable = false;
+		let mongoMemoryServerAvailable = false;
+
 		try {
 			require.resolve("mongodb");
 			mongoDbAvailable = true;
@@ -66,8 +68,15 @@ describe("Before jasmine test convenient method", () => {
 			// MongoDB not installed
 		}
 
-		if (!mongoDbAvailable || process.env.CI) {
-			console.log("Skipping MongoDB test - mongodb not installed or running in CI");
+		try {
+			require.resolve("mongodb-memory-server");
+			mongoMemoryServerAvailable = true;
+		} catch (e) {
+			// mongodb-memory-server not installed
+		}
+
+		if (!mongoDbAvailable || !mongoMemoryServerAvailable || process.env.CI) {
+			console.log("Skipping in-memory MongoDB test - mongodb or mongodb-memory-server not installed or running in CI");
 			return;
 		}
 
@@ -76,7 +85,7 @@ describe("Before jasmine test convenient method", () => {
 		testUtils.startBeforeAll({
 			service: service,
 			bus: bus,
-			mongoUrl: "mongodb://localhost:27017/test-utils-test",
+			useInMemoryMongo: true,  // Use in-memory MongoDB instead of external
 			mockNats: true,
 			afterStart: (connection) => {
 				// create a collection to verify MongoDB connection works
