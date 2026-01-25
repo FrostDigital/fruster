@@ -2,18 +2,14 @@ import bus from "../index";
 import { startNatsServer } from "./support/test-utils";
 
 describe("bus options", () => {
-	afterEach(async (done) => {
+	afterEach(async () => {
 		await bus.closeAll();
 		bus.clearClients();
-
-		done();
 	});
 
-	afterAll(async (done) => {
+	afterAll(async () => {
 		await bus.closeAll();
 		bus.clearClients();
-
-		done();
 	});
 
 	it("should be possible to connect using an array of bus addresses", async () => {

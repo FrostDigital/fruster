@@ -11,9 +11,9 @@ describe("subscribe", function () {
 		startNatsServerAndConnectBus(undefined, "/spec/support/test-schemas")
 			.then((connection) => {
 				natsConnection = connection;
-				done();
 			})
-			.catch(done.fail);
+			.then(() => done())
+			.catch(() => done.fail());
 	});
 
 	afterAll(() => {
@@ -21,9 +21,9 @@ describe("subscribe", function () {
 		bus.closeAll();
 	});
 
-	it("should throw MUST_BE_LOGGED_IN error if user is not authorized before checking PERMISSION DENIED", async (done) => {
+	it("should throw MUST_BE_LOGGED_IN error if user is not authorized before checking PERMISSION DENIED", async () => {
 		bus.subscribe({ subject: "ram-jam", permissions: ["test.hello"] }, () => {
-			done.fail("Should not send request to ram-jam");
+			fail("Should not send request to ram-jam");
 		});
 
 		try {
@@ -36,13 +36,12 @@ describe("subscribe", function () {
 		} catch (err: any) {
 			expect(err.status).toBe(403);
 			expect(err.error.code).toBe("MUST_BE_LOGGED_IN");
-			done();
 		}
 	});
 
-	it("should throw MUST_BE_LOGGED_IN error if user is not authorized before checking PERMISSION DENIED", async (done) => {
+	it("should throw MUST_BE_LOGGED_IN error if user is not authorized before checking PERMISSION DENIED", async () => {
 		bus.subscribe({ subject: "ram-jam", mustBeLoggedIn: true }, () => {
-			done.fail("Should not send request to ram-jam");
+			fail("Should not send request to ram-jam");
 		});
 
 		try {
@@ -55,13 +54,12 @@ describe("subscribe", function () {
 		} catch (err: any) {
 			expect(err.status).toBe(403);
 			expect(err.error.code).toBe("MUST_BE_LOGGED_IN");
-			done();
 		}
 	});
 
-	it("should throw MUST_BE_LOGGED_IN error if user is not authorized before checking PERMISSION DENIED", async (done) => {
+	it("should throw MUST_BE_LOGGED_IN error if user is not authorized before checking PERMISSION DENIED", async () => {
 		bus.subscribe({ subject: "ram-jam", mustBeLoggedIn: true, permissions: ["test.hello"] }, () => {
-			done.fail("Should not send request to ram-jam");
+			fail("Should not send request to ram-jam");
 		});
 
 		try {
@@ -74,13 +72,12 @@ describe("subscribe", function () {
 		} catch (err: any) {
 			expect(err.status).toBe(403);
 			expect(err.error.code).toBe("MUST_BE_LOGGED_IN");
-			done();
 		}
 	});
 
-	it("should throw PERMISSION_DENIED error if user lacks right permission scopes", async (done) => {
+	it("should throw PERMISSION_DENIED error if user lacks right permission scopes", async () => {
 		bus.subscribe({ subject: "ram-jam", permissions: ["test.hello"] }, () => {
-			done.fail("Should not send request to ram-jam");
+			fail("Should not send request to ram-jam");
 		});
 
 		try {
@@ -97,13 +94,12 @@ describe("subscribe", function () {
 		} catch (err: any) {
 			expect(err.status).toBe(403);
 			expect(err.error.code).toBe("PERMISSION_DENIED");
-			done();
 		}
 	});
 
-	it("should throw PERMISSION_DENIED error if user lacks right permission scopes if mustBeLoggedIn is set", async (done) => {
+	it("should throw PERMISSION_DENIED error if user lacks right permission scopes if mustBeLoggedIn is set", async () => {
 		bus.subscribe({ subject: "ram-jam", mustBeLoggedIn: true, permissions: ["test.hello"] }, () => {
-			done.fail("Should not send request to ram-jam");
+			fail("Should not send request to ram-jam");
 		});
 
 		try {
@@ -120,7 +116,6 @@ describe("subscribe", function () {
 		} catch (err: any) {
 			expect(err.status).toBe(403);
 			expect(err.error.code).toBe("PERMISSION_DENIED");
-			done();
 		}
 	});
 
@@ -183,7 +178,7 @@ describe("subscribe", function () {
 		expect(optionsResponse.from).toBeDefined();
 	});
 
-	it("should set and get context values for reqId and user", async (done) => {
+	it("should set and get context values for reqId and user", (done) => {
 		const subject1 = "context-test-1";
 		const subject2 = "context-test-2";
 

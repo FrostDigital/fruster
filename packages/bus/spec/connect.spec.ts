@@ -4,15 +4,13 @@ import { startNatsServer, TestConnection } from "./support/test-utils";
 describe("Connect", function () {
 	let natsConnection: TestConnection;
 
-	beforeEach(async (done) => {
+	beforeEach(async () => {
 		try {
 			const connection = await startNatsServer();
 			natsConnection = connection;
-
-			done();
 		} catch (err) {
 			console.error(err);
-			done.fail();
+			fail();
 		}
 	});
 
