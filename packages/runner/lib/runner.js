@@ -97,12 +97,57 @@ function main(args) {
  * @param {string[]} fileNames
  */
 function emitTransformedFiles(program, transformers, options, fileNames) {
+  // Get source files from program - these have full semantic info including decorators
+  const sourceFiles = program.getSourceFiles().filter(
+    (sf) => !sf.isDeclarationFile && !sf.fileName.includes("node_modules")
+  );
+
+  // Transform each source file individually
+  const transformedFiles = new Map();
+  for (const sourceFile of sourceFiles) {
+    const result = ts.transform(sourceFile, [
+      (context) => {
+        const transformerFactory = transformers.before[0];
+        return transformerFactory(context);
+      },
+      ...transformers.after,
+    ]);
+
+    if (result.transformed.length > 0) {
+      transformedFiles.set(sourceFile.fileName, result.transformed[0]);
+    }
+    result.dispose();
+  }
+
+  // Create a custom write file function that uses transformed AST
+  const writeFile = (fileName, data, writeByteOrderMark, onError, sourceFiles) => {
+    // Use transformed content if available
+    if (sourceFiles && sourceFiles.length > 0) {
+      const sourceFile = sourceFiles[0];
+      const transformed = transformedFiles.get(sourceFile.fileName);
+
+      if (transformed) {
+        // Print the transformed AST to get the output
+        const printer = ts.createPrinter();
+        const transformedCode = printer.printFile(transformed);
+
+        // Write the transformed code instead of original
+        ts.sys.writeFile(fileName, transformedCode, writeByteOrderMark);
+        return;
+      }
+    }
+
+    // Fallback to default behavior
+    ts.sys.writeFile(fileName, data, writeByteOrderMark);
+  };
+
+  // Emit with custom write function
   const { emitSkipped, diagnostics } = program.emit(
     undefined,
+    writeFile,
     undefined,
     undefined,
-    undefined,
-    transformers
+    undefined  // Don't pass transformers here, we already transformed
   );
 
   if (emitSkipped) {
