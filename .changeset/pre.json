@@ -12,6 +12,7 @@
     "@fruster/ts-transformer": "1.2.0"
   },
   "changesets": [
+    "cleanup-helpers",
     "fix-dependency-versions",
     "mongodb-support-minor",
     "typescript-5-9-compatibility"
