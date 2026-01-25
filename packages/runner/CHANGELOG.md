@@ -1,5 +1,20 @@
 # @fruster/runner
 
+## 1.2.1-alpha.0
+
+### Patch Changes
+
+- d2b2111: fix: TypeScript 5.9 compatibility for decorator transformation
+
+  Fixed TypeScript transformer to work correctly with TypeScript 5.9's decorator API changes. The transformer now properly detects and transforms @subscribe decorators using ts.getDecorators() API and manual AST iteration.
+
+  Updated fruster-runner to transform source files individually before emit to ensure decorators are properly preserved in the AST during transformation.
+
+  All packages now use consistent TypeScript ^5.9.0 version to avoid compatibility issues.
+
+- Updated dependencies [d2b2111]
+  - @fruster/ts-transformer@1.2.1-alpha.0
+
 ## 1.2.0
 
 ### Minor Changes

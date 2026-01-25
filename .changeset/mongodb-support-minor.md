@@ -1,7 +1,6 @@
 ---
 "@fruster/test-utils": minor
 "@fruster/bus": patch
-"demo-app": minor
 ---
 
 Add in-memory MongoDB support and enhance test utilities:
@@ -15,7 +14,7 @@ Add in-memory MongoDB support and enhance test utilities:
 - Comprehensive README documentation with comparison table and migration guide
 - Add graceful NATS server detection and error handling
 
-**demo-app:**
+**demo-app (not published):**
 - Add real-world MongoDB integration example with CarRepository pattern
 - Create CarRepo for database operations following Fruster repository pattern
 - Add CreateCarHandler for creating cars in database
