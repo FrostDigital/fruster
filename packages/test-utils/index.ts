@@ -513,10 +513,21 @@ export async function stop(
 	// MongoDB cleanup
 	if (connection.client) {
 		if (options?.dropDatabase) {
-			try {
-				await connection.db?.dropDatabase();
-			} catch (e) {
-				console.log("Failed dropping database", e);
+			// Only allow dropDatabase with in-memory MongoDB
+			if (connection.memoryServer) {
+				try {
+					await connection.db?.dropDatabase();
+				} catch (e) {
+					console.log("Failed dropping database", e);
+				}
+			} else {
+				// Warn if trying to drop a real MongoDB database
+				console.warn(
+					"⚠️  WARNING: dropDatabase is set to true but you're using an external MongoDB connection. " +
+					"For safety, dropDatabase only works with in-memory MongoDB (useInMemoryMongo: true). " +
+					"Your database will NOT be dropped. " +
+					"If you need to clean a real database, do it manually in beforeStop/afterStart hooks."
+				);
 			}
 		}
 

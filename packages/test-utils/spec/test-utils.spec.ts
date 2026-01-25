@@ -153,26 +153,50 @@ if (mongoDbAvailable && !process.env.CI) {
 			await testUtils.close(connection);
 		});
 
-		it("should drop database when dropDatabase option is true", async () => {
+		it("should log warning when trying to drop external database (safety feature)", async () => {
+			// Spy on console.warn to verify the warning is logged
+			const originalWarn = console.warn;
+			let warningLogged = false;
+			let warningMessage = "";
+			console.warn = (...args: any[]) => {
+				const message = args.join(" ");
+				if (message.includes("dropDatabase is set to true")) {
+					warningLogged = true;
+					warningMessage = message;
+				}
+				originalWarn.apply(console, args);
+			};
+
 			const connection = await testUtils.start({
 				bus: bus,
-				mongoUrl: "mongodb://localhost:27017/fruster-test-util-drop-test",
+				mongoUrl: "mongodb://localhost:27017/fruster-test-util-safety-test",
 			});
 
-			// Insert a document to verify database exists
-			await connection.db?.collection("test").insertOne({ test: "data" });
+			// Insert a document
+			await connection.db?.collection("test").insertOne({ test: "should-not-be-deleted" });
 
+			// Try to close with dropDatabase: true (should NOT drop for external MongoDB)
 			await testUtils.close(connection, { dropDatabase: true });
 
-			// Verify database was dropped by reconnecting
+			// Restore console.warn
+			console.warn = originalWarn;
+
+			// Verify warning was logged
+			expect(warningLogged).toBe(true);
+			expect(warningMessage).toContain("dropDatabase is set to true but you're using an external MongoDB");
+
+			// Reconnect and verify data still exists (was NOT dropped)
 			const connection2 = await testUtils.start({
 				bus: bus,
-				mongoUrl: "mongodb://localhost:27017/fruster-test-util-drop-test",
+				mongoUrl: "mongodb://localhost:27017/fruster-test-util-safety-test",
 			});
 
-			const doc = await connection2.db?.collection("test").findOne({ test: "data" });
-			expect(doc).toBeNull();
+			const doc = await connection2.db?.collection("test").findOne({ test: "should-not-be-deleted" });
+			expect(doc).toBeDefined();
+			expect(doc?.test).toBe("should-not-be-deleted");
 
+			// Manual cleanup
+			await connection2.db?.collection("test").deleteMany({});
 			await testUtils.close(connection2);
 		});
 	});

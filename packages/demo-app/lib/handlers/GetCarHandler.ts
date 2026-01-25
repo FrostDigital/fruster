@@ -1,28 +1,52 @@
 import { FrusterRequest, FrusterResponse } from "@fruster/bus";
-import { injectable, subscribe } from "@fruster/decorators";
+import { injectable, subscribe, inject } from "@fruster/decorators";
 import { Car } from "../models/Car";
-import * as uuid from "uuid";
+import { CarRepo } from "../repos/CarRepo";
 
 export interface GetCarRequest {
   /**
+   * Car ID to retrieve
    * @TJS-type string
    */
-  brand?: string;
+  id: string;
 }
 
 @injectable()
 class GetCarHandler {
+  @inject()
+  carRepo?: CarRepo;
+
   @subscribe({
     subject: "demo-service.get-car",
   })
-  handle(req: FrusterRequest<GetCarRequest>): FrusterResponse<Car> {
+  async handle(req: FrusterRequest<GetCarRequest>): Promise<FrusterResponse<Car>> {
+    if (!this.carRepo) {
+      return {
+        status: 500,
+        data: {
+          id: "",
+          brand: "",
+          model: "",
+        },
+      };
+    }
+
+    const car = await this.carRepo.findById(req.data.id);
+
+    if (!car) {
+      return {
+        status: 404,
+        data: {
+          id: "",
+          brand: "",
+          model: "",
+        },
+      };
+    }
+
     return {
       status: 200,
-      data: {
-        id: uuid.v4(),
-        brand: req.data.brand || "Tesla",
-        model: "Model",
-      },
+      data: car,
     };
   }
 
@@ -38,10 +62,11 @@ class GetCarHandler {
       }
     >
   ): FrusterResponse<Car> {
+    // HTTP handler kept simple for demo purposes
     return {
       status: 200,
       data: {
-        id: uuid.v4(),
+        id: "http-example",
         brand: "Tesla",
         model: "Model",
       },

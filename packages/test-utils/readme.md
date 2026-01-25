@@ -146,14 +146,37 @@ await testUtils.close(connection);
 
 ### Drop Database After Tests
 
-Use the `dropDatabase` option to automatically clean up your test database:
+**Important Safety Notice:** The `dropDatabase` option only works with in-memory MongoDB (`useInMemoryMongo: true`) for safety reasons. It will NOT drop external MongoDB databases.
+
+```javascript
+// ❌ This will NOT drop the database (safety feature)
+testUtils.startBeforeEach({
+	service: service,
+	bus: bus,
+	mongoUrl: "mongodb://localhost:27017/test-db",
+	dropDatabase: true  // Warning logged, database NOT dropped
+});
+
+// ✅ This WILL drop the database (safe with in-memory)
+testUtils.startBeforeEach({
+	service: service,
+	bus: bus,
+	useInMemoryMongo: true,
+	dropDatabase: true  // Database dropped after each test
+});
+```
+
+If you need to clean an external database, do it manually in hooks:
 
 ```javascript
 testUtils.startBeforeEach({
 	service: service,
 	bus: bus,
 	mongoUrl: "mongodb://localhost:27017/test-db",
-	dropDatabase: true  // Database will be dropped after each test
+	beforeStop: async (connection) => {
+		// Manually drop specific collections if needed
+		await connection.db?.collection("test-data").deleteMany({});
+	}
 });
 ```
 
@@ -262,7 +285,7 @@ await testUtils.close(connection);  // Automatically stops the memory server
 - The in-memory server is automatically started before connecting to MongoDB
 - The in-memory server is automatically stopped when calling `testUtils.close()` or `testUtils.stop()`
 - Each test run gets a fresh, isolated MongoDB instance
-- The `dropDatabase` option works with both external and in-memory MongoDB
+- **Safety Feature:** The `dropDatabase` option **only works with in-memory MongoDB**. It will not drop external databases to prevent accidental data loss
 
 ### TypeScript Support
 
