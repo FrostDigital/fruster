@@ -1,14 +1,23 @@
 import * as fBus from "@fruster/bus";
 import getPort from "get-port";
-import { Db, MongoClient } from "mongodb";
 import MockService, { MockServiceOpts } from "./MockService";
 const nsc = require("nats-server-control");
 
+// Duck-typed MongoDB interfaces to avoid hard dependency
+interface DuckDb {
+	dropDatabase(): Promise<any>;
+	collection(name: string): any;
+}
+
+interface DuckMongoClient {
+	connect(): Promise<DuckMongoClient>;
+	db(dbName?: string): DuckDb;
+	close(): Promise<void>;
+}
+
 interface ServiceWithStart {
 	[x: string]: any;
-	start:
-		| ((natsUrl: string) => any)
-		| ((natsUrl: string, mongoUrl: string) => any);
+	start: ((natsUrl: string, mongoUrl?: string) => any);
 }
 
 let bus: fBus.FrusterBus;
@@ -44,9 +53,13 @@ export interface FrusterTestUtilsOptions {
 		connection: FrusterTestUtilsConnection
 	) => void | Promise<void>;
 	/**
-	 * The mongo url to connect to.
+	 * MongoDB connection URL. Requires mongodb package to be installed.
 	 */
 	mongoUrl?: string;
+	/**
+	 * Whether to drop the database when stopping. Only applies if mongoUrl is provided.
+	 */
+	dropDatabase?: boolean;
 	/**
 	 * Optional nats port, if none is provided this will be randomized.
 	 */
@@ -63,15 +76,11 @@ export interface FrusterTestUtilsOptions {
 	 * Optional schema resolver.
 	 */
 	schemaResolver?: any;
-	/**
-	 * If to drop database after test is done.
-	 */
-	dropDatabase?: boolean;
 }
 
 export interface FrusterTestUtilsConnection {
-	db: Db;
-	client?: MongoClient;
+	db?: DuckDb;
+	client?: DuckMongoClient;
 	port: number;
 	server: any;
 	natsUrl: string;
@@ -80,8 +89,8 @@ export interface FrusterTestUtilsConnection {
 }
 
 interface FrusterTestUtilsConnectionBuilder {
-	db?: Db;
-	client?: MongoClient;
+	db?: DuckDb;
+	client?: DuckMongoClient;
 	port?: number;
 	server?: any;
 	natsUrl?: string;
@@ -144,7 +153,7 @@ function startBefore(
 }
 
 /**
- * Start nats, mongo, fruster bus, a service - all depending on options.
+ * Start nats, mongo (optional), fruster bus, a service - all depending on options.
  * Will return a `connection` object that holds all details about above
  * connections.
  *
@@ -158,15 +167,16 @@ function startBefore(
  * 			// Will ignore `natsPort` if set to true
  * 			mockNats: false,
  *
- * 			// Providing a mongo url will start mongo
- *			mongoUrl: "mongo://localhost:27017",
+ * 			// Optional: Providing a mongo url will connect to MongoDB
+ * 			// Requires mongodb package to be installed: pnpm add -D mongodb
+ *			mongoUrl: "mongodb://localhost:27017/test-db",
  *
  *          // Fruster bus to connect
  *			bus: bus,
  *
- *			// Will start service - this requries the service to have a
+ *			// Will start service - this requires the service to have a
  * 			// function named `start` where first argument is nats bus address
- *			// and second argument is mongo (if prevoiusly connected)
+ * 			// and optional second argument is mongo url (if provided)
  *			service: fooService
  *		})
 
@@ -226,9 +236,10 @@ async function startService(
 
 		if (connection.natsUrl) {
 			if (opts.mongoUrl) {
+				// Call with both natsUrl and mongoUrl
 				await opts.service.start(connection.natsUrl, opts.mongoUrl);
 			} else {
-				// @ts-ignore for some reason ts compiler does not allow a single argument here :/
+				// Call with only natsUrl
 				await opts.service.start(connection.natsUrl);
 			}
 		}
@@ -243,22 +254,32 @@ async function connectToMongo(
 	opts: FrusterTestUtilsOptions,
 	connection: FrusterTestUtilsConnectionBuilder
 ) {
-	if (opts.mongoUrl) {
+	if (!opts.mongoUrl) {
+		return connection;
+	}
+
+	try {
+		// Dynamic import - only loads if mongodb is installed
+		const mongodb = require("mongodb");
+		const MongoClient = mongodb.MongoClient;
+
 		const client = new MongoClient(opts.mongoUrl);
-		try {
-			await client.connect();
-		} catch (e) {
-			console.log(
-				`Test utils failed connecting to mongo on ${opts.mongoUrl}`,
-				e
-			);
-			throw e;
-		}
+		await client.connect();
+
 		connection.db = client.db();
 		connection.client = client;
 		return connection;
+	} catch (error: any) {
+		if (error.code === 'MODULE_NOT_FOUND') {
+			throw new Error(
+				'MongoDB support requires the "mongodb" package to be installed. ' +
+				'Install it with: pnpm add mongodb (or pnpm add -D mongodb for test-only usage)\n' +
+				'Original error: ' + error.message
+			);
+		}
+		console.log(`Test utils failed connecting to mongo on ${opts.mongoUrl}`, error);
+		throw error;
 	}
-	return connection;
 }
 
 async function connectBus(
@@ -289,7 +310,7 @@ export async function startNatsServer(
 	const natsServerPort = opts.natsPort || anAvailablePort;
 	const natsUrl = "nats://localhost:" + natsServerPort;
 
-	let connection: Omit<FrusterTestUtilsConnection, "db"> = {
+	let connection: FrusterTestUtilsConnection = {
 		server: null,
 		natsUrl: natsUrl,
 		port: natsServerPort,
@@ -307,7 +328,7 @@ export async function startNatsServer(
 }
 
 /**
- * Stop nats, close fruster bus connection(s) and drop database
+ * Stop nats, close fruster bus connection(s) and drop database (if configured)
  */
 export async function stop(
 	connection: Partial<FrusterTestUtilsConnection>,
@@ -327,6 +348,7 @@ export async function stop(
 		}
 	}
 
+	// MongoDB cleanup
 	if (connection.client) {
 		if (options?.dropDatabase) {
 			try {
@@ -336,7 +358,11 @@ export async function stop(
 			}
 		}
 
-		await connection.client?.close();
+		try {
+			await connection.client?.close();
+		} catch (e) {
+			console.log("Failed closing MongoDB connection", e);
+		}
 	}
 }
 

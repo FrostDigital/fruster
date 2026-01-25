@@ -58,10 +58,16 @@ describe("Before jasmine test convenient method", () => {
 	});
 
 	describe("beforeAll with mongo db", () => {
-		if (!process.env.CI) {
-			console.log(
-				"Skipping test that requires mongodb unless CI=1 is set"
-			);
+		let mongoDbAvailable = false;
+		try {
+			require.resolve("mongodb");
+			mongoDbAvailable = true;
+		} catch (e) {
+			// MongoDB not installed
+		}
+
+		if (!mongoDbAvailable || process.env.CI) {
+			console.log("Skipping MongoDB test - mongodb not installed or running in CI");
 			return;
 		}
 
@@ -73,10 +79,8 @@ describe("Before jasmine test convenient method", () => {
 			mongoUrl: "mongodb://localhost:27017/test-utils-test",
 			mockNats: true,
 			afterStart: (connection) => {
-				// create a collection and see if it removes
-				return connection.db
-					?.collection("foo")
-					.insertOne({ id: "hello" });
+				// create a collection to verify MongoDB connection works
+				return connection.db?.collection("foo").insertOne({ id: "hello" });
 			},
 			beforeStop: (connection) => {
 				console.log("invoking beforeStop()");
@@ -88,4 +92,5 @@ describe("Before jasmine test convenient method", () => {
 			expect(service.count).toBe(1);
 		});
 	});
+
 });

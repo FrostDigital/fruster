@@ -4,7 +4,7 @@ Utils for jasmine tests.
 
 ## Start and stop a service beforeEach/beforeAll
 
-Convenient method to start nats, connect bus, start mongo db and a service before each or all tests.
+Convenient method to start nats, connect bus, optionally connect to MongoDB, and start a service before each or all tests.
 
 ```javascript
 describe("Foo spec", () => {
@@ -28,7 +28,7 @@ describe("Foo spec", () => {
 		service: service,
 		bus: bus,
 		afterStart: (connection) => {
-			repo = new Repo(connection.db);
+			// do something after service has started
 			return Promise.resolve();
 		},
 		beforeStop: (connection) => {
@@ -39,6 +39,89 @@ describe("Foo spec", () => {
 
 });
 ```
+
+## MongoDB Support (Optional)
+
+The test-utils package supports MongoDB connections, but does not include MongoDB as a dependency. If you need MongoDB support in your tests:
+
+### Installation
+
+If your application already uses MongoDB in production, the `mongodb` package is likely already installed as a regular dependency and no additional installation is needed.
+
+If you only need MongoDB for testing (and your application doesn't use it in production), install it as a dev dependency:
+```bash
+pnpm add -D mongodb
+```
+
+If your application uses MongoDB in production:
+```bash
+pnpm add mongodb
+```
+
+### Usage
+
+Use MongoDB in your tests by providing a `mongoUrl`:
+
+```javascript
+describe("Foo spec", () => {
+	testUtils.startBeforeEach({
+		service: service,
+		bus: bus,
+		mongoUrl: "mongodb://localhost:27017/test-db",
+		dropDatabase: true,  // Drops database after each test
+		afterStart: (connection) => {
+			// Access MongoDB database
+			const users = connection.db.collection("users");
+			return users.insertOne({ name: "test" });
+		},
+	});
+
+	it("should work with MongoDB", async () => {
+		// Your test code here
+	});
+});
+```
+
+### Access MongoDB Connection
+
+```javascript
+const connection = await testUtils.start({
+	bus: bus,
+	mongoUrl: "mongodb://localhost:27017/test-db"
+});
+
+// connection.db is the MongoDB Db instance
+// connection.client is the MongoClient instance
+await connection.db.collection("users").insertOne({ name: "John" });
+
+await testUtils.close(connection);
+```
+
+### Drop Database After Tests
+
+Use the `dropDatabase` option to automatically clean up your test database:
+
+```javascript
+testUtils.startBeforeEach({
+	service: service,
+	bus: bus,
+	mongoUrl: "mongodb://localhost:27017/test-db",
+	dropDatabase: true  // Database will be dropped after each test
+});
+```
+
+### Error Handling
+
+If you use `mongoUrl` without installing the mongodb package, you'll receive a helpful error message:
+
+```
+MongoDB support requires the "mongodb" package to be installed.
+Install it with: pnpm add mongodb (or pnpm add -D mongodb for test-only usage)
+```
+
+### Version Compatibility
+
+This dynamic loading approach works with all MongoDB driver versions (3.x, 4.x, 5.x, 6.x) since the core API (`connect()`, `db()`, `close()`, `dropDatabase()`) has remained stable.
 
 ## Mock a service
 
