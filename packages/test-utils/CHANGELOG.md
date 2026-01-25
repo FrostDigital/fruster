@@ -1,5 +1,73 @@
 # @fruster/test-utils
 
+## 1.3.0-alpha.0
+
+### Minor Changes
+
+- Add MongoDB support with dynamic imports and zero dependencies
+
+## 1.2.0
+
+### Minor Changes
+
+- feat: add optional mongodb-memory-server support for in-memory MongoDB testing
+
+  - Add `useInMemoryMongo` option to start an in-memory MongoDB server for testing
+  - Add `inMemoryMongoOptions` for configuring the in-memory server (MongoDB version, port, database name, storage engine)
+  - Add mongodb-memory-server as optional peer dependency
+  - Automatically stop in-memory server when calling `stop()` or `close()`
+  - Update README with comprehensive documentation including comparison table, migration guide, and performance tips
+  - Add test cases for in-memory MongoDB functionality
+
+- Add MongoDB support with dynamic imports and zero dependencies
+
+  Restore MongoDB support to @fruster/test-utils using dynamic imports with zero hard dependencies on the mongodb package. Key features include duck-typed interfaces, lazy loading, optional mongoUrl parameter, and support for MongoDB driver versions 3.x through 6.x with comprehensive documentation and tests.
+
+### Patch Changes
+
+- cf465a5: Fix workspace protocol in published packages
+- e87a82f: Add support for filtering Jasmine specs via command-line arguments
+
+  The fruster-runner now preserves command-line arguments after the entry file, allowing jasmine-runner to receive and forward spec filters to Jasmine's execute() method.
+
+  Usage examples:
+
+  - Run specific spec file: `fruster-runner ./spec/support/jasmine-runner.ts spec/CarHandler.spec.ts`
+  - Filter by spec name: `fruster-runner ./spec/support/jasmine-runner.ts --filter="should get car"`
+  - Use regex patterns: `fruster-runner ./spec/support/jasmine-runner.ts --filter="should get car$"`
+  - Combine both: `fruster-runner ./spec/support/jasmine-runner.ts spec/MyHandler.spec.ts --filter="specific test"`
+
+- 824a007: Migrate monorepo from Lerna to pnpm workspaces with Changesets
+
+  This migration brings:
+
+  - Faster dependency installation with pnpm's content-addressable storage
+  - Better disk efficiency through hard-linked packages
+  - Automatic dependency bumping when internal packages change
+  - Modern tooling with active development and maintenance
+  - Improved developer experience with workspace protocol support
+
+- Updated dependencies [cf465a5]
+- Updated dependencies [824a007]
+  - @fruster/bus@1.2.0
+
+## 1.2.0-alpha.4
+
+### Minor Changes
+
+- feat: add optional mongodb-memory-server support for in-memory MongoDB testing
+
+  - Add `useInMemoryMongo` option to start an in-memory MongoDB server for testing
+  - Add `inMemoryMongoOptions` for configuring the in-memory server (MongoDB version, port, database name, storage engine)
+  - Add mongodb-memory-server as optional peer dependency
+  - Automatically stop in-memory server when calling `stop()` or `close()`
+  - Update README with comprehensive documentation including comparison table, migration guide, and performance tips
+  - Add test cases for in-memory MongoDB functionality
+
+- Add MongoDB support with dynamic imports and zero dependencies
+
+  Restore MongoDB support to @fruster/test-utils using dynamic imports with zero hard dependencies on the mongodb package. Key features include duck-typed interfaces, lazy loading, optional mongoUrl parameter, and support for MongoDB driver versions 3.x through 6.x with comprehensive documentation and tests.
+
 ## 1.2.0-alpha.3
 
 ### Patch Changes

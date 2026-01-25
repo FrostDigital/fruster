@@ -123,6 +123,169 @@ Install it with: pnpm add mongodb (or pnpm add -D mongodb for test-only usage)
 
 This dynamic loading approach works with all MongoDB driver versions (3.x, 4.x, 5.x, 6.x) since the core API (`connect()`, `db()`, `close()`, `dropDatabase()`) has remained stable.
 
+## In-Memory MongoDB Support (Optional)
+
+For faster and more isolated tests, you can use in-memory MongoDB instead of connecting to an external MongoDB instance. This eliminates the need for a running MongoDB server during tests.
+
+### Installation
+
+Install both `mongodb` and `mongodb-memory-server` as dev dependencies:
+
+```bash
+pnpm add -D mongodb mongodb-memory-server
+```
+
+**Note:** The first time you use mongodb-memory-server, it will download a MongoDB binary (~70-100MB). This download is cached, so subsequent test runs will be fast.
+
+### Basic Usage
+
+Enable in-memory MongoDB with the `useInMemoryMongo` option:
+
+```javascript
+describe("Foo spec", () => {
+	testUtils.startBeforeEach({
+		service: service,
+		bus: bus,
+		useInMemoryMongo: true,  // Start in-memory MongoDB
+		dropDatabase: true,       // Clean database after each test
+		afterStart: (connection) => {
+			// Access MongoDB database (just like with external MongoDB)
+			const users = connection.db.collection("users");
+			return users.insertOne({ name: "test" });
+		},
+	});
+
+	it("should work with in-memory MongoDB", async () => {
+		// Your test code here
+	});
+});
+```
+
+### Comparison: External vs In-Memory MongoDB
+
+| Feature | External MongoDB (`mongoUrl`) | In-Memory MongoDB (`useInMemoryMongo`) |
+|---------|------------------------------|---------------------------------------|
+| **Setup** | Requires running MongoDB server | No external server needed |
+| **Speed** | Network overhead | Faster (in-process) |
+| **Isolation** | Shared server (potential conflicts) | Completely isolated per test run |
+| **Cleanup** | Must manually clean data | Automatic cleanup on stop |
+| **Best for** | Integration tests, debugging | Unit tests, CI/CD pipelines |
+
+### Advanced Configuration
+
+Customize the in-memory MongoDB server with `inMemoryMongoOptions`:
+
+```javascript
+testUtils.startBeforeEach({
+	service: service,
+	bus: bus,
+	useInMemoryMongo: true,
+	inMemoryMongoOptions: {
+		binary: {
+			version: "7.0.0",  // Specific MongoDB version
+		},
+		instance: {
+			port: 27017,        // Custom port (optional)
+			dbName: "test-db",  // Custom database name
+			storageEngine: "ephemeralForTest",  // Fastest for testing
+		},
+	},
+});
+```
+
+### Programmatic Usage
+
+```javascript
+const connection = await testUtils.start({
+	bus: bus,
+	useInMemoryMongo: true,
+});
+
+// connection.db is the MongoDB Db instance
+// connection.client is the MongoClient instance
+// connection.memoryServer is the MongoMemoryServer instance
+await connection.db.collection("users").insertOne({ name: "John" });
+
+await testUtils.close(connection);  // Automatically stops the memory server
+```
+
+### Behavior Notes
+
+- When `useInMemoryMongo: true` is set, any `mongoUrl` option is **ignored**
+- The in-memory server is automatically started before connecting to MongoDB
+- The in-memory server is automatically stopped when calling `testUtils.close()` or `testUtils.stop()`
+- Each test run gets a fresh, isolated MongoDB instance
+- The `dropDatabase` option works with both external and in-memory MongoDB
+
+### TypeScript Support
+
+Full TypeScript types are provided for all in-memory MongoDB options:
+
+```typescript
+import testUtils, { FrusterTestUtilsOptions } from "@fruster/test-utils";
+
+const options: FrusterTestUtilsOptions = {
+	bus: bus,
+	useInMemoryMongo: true,
+	inMemoryMongoOptions: {
+		binary: {
+			version: "7.0.0",
+		},
+		instance: {
+			dbName: "test-db",
+			storageEngine: "ephemeralForTest",
+		},
+	},
+};
+
+const connection = await testUtils.start(options);
+```
+
+### Error Handling
+
+If you use `useInMemoryMongo: true` without installing mongodb-memory-server, you'll receive a helpful error message:
+
+```
+In-memory MongoDB support requires the "mongodb-memory-server" package.
+Install it with: pnpm add -D mongodb-memory-server
+```
+
+### Performance Tips
+
+1. **Storage Engine**: Use `storageEngine: "ephemeralForTest"` (default) for fastest performance
+2. **Binary Caching**: The MongoDB binary is downloaded once and cached. First run may be slow.
+3. **CI/CD**: Pre-download the binary in your CI setup to avoid timeouts:
+   ```bash
+   # In CI setup script
+   node -e "require('mongodb-memory-server').MongoMemoryServer.create()"
+   ```
+
+### Migration from External to In-Memory MongoDB
+
+To migrate existing tests from external MongoDB to in-memory:
+
+**Before:**
+```javascript
+testUtils.startBeforeEach({
+	service: service,
+	bus: bus,
+	mongoUrl: "mongodb://localhost:27017/test-db",
+	dropDatabase: true,
+});
+```
+
+**After:**
+```javascript
+testUtils.startBeforeEach({
+	service: service,
+	bus: bus,
+	useInMemoryMongo: true,  // Just change this!
+	dropDatabase: true,       // Everything else stays the same
+});
+```
+
+All your existing test code using `connection.db` and `connection.client` will work without changes.
+
 ## Mock a service
 
 ### Mock sequence of responses

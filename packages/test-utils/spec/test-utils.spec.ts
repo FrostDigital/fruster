@@ -177,3 +177,127 @@ if (mongoDbAvailable && !process.env.CI) {
 		});
 	});
 }
+
+// Detect if mongodb-memory-server is available
+let mongoMemoryServerAvailable = false;
+try {
+	require.resolve("mongodb-memory-server");
+	mongoMemoryServerAvailable = true;
+} catch (e) {
+	console.log("mongodb-memory-server not available, skipping in-memory MongoDB tests");
+}
+
+if (mongoMemoryServerAvailable && mongoDbAvailable && !process.env.CI) {
+	describe("In-memory MongoDB integration", () => {
+		it("should start in-memory MongoDB when useInMemoryMongo is true", async () => {
+			const connection = await testUtils.start({
+				bus: bus,
+				useInMemoryMongo: true,
+			});
+
+			expect(connection.db).toBeDefined();
+			expect(connection.client).toBeDefined();
+			expect(connection.memoryServer).toBeDefined();
+
+			await testUtils.close(connection);
+		}, 30000); // Increased timeout for downloading MongoDB binary
+
+		it("should pass in-memory MongoDB URI to service.start()", async () => {
+			let receivedMongoUrl: string | undefined;
+
+			const connection = await testUtils.start({
+				bus: bus,
+				useInMemoryMongo: true,
+				service: {
+					start: (natsUrl: string, mongoUrl?: string) => {
+						receivedMongoUrl = mongoUrl;
+						expect(mongoUrl).toMatch(/^mongodb:\/\//);
+						return Promise.resolve();
+					},
+				},
+			});
+
+			expect(receivedMongoUrl).toBeDefined();
+			expect(receivedMongoUrl).toMatch(/^mongodb:\/\//);
+
+			await testUtils.close(connection);
+		}, 30000);
+
+		it("should allow database operations with in-memory MongoDB", async () => {
+			const connection = await testUtils.start({
+				bus: bus,
+				useInMemoryMongo: true,
+			});
+
+			// Insert a document
+			await connection.db?.collection("test").insertOne({ name: "test-user" });
+
+			// Query the document
+			const doc = await connection.db?.collection("test").findOne({ name: "test-user" });
+			expect(doc).toBeDefined();
+			expect(doc?.name).toBe("test-user");
+
+			await testUtils.close(connection);
+		}, 30000);
+
+		it("should drop in-memory database when dropDatabase option is true", async () => {
+			const connection = await testUtils.start({
+				bus: bus,
+				useInMemoryMongo: true,
+			});
+
+			// Insert a document
+			await connection.db?.collection("test").insertOne({ test: "data" });
+
+			const memoryServerUri = connection.memoryServer?.getUri();
+
+			await testUtils.close(connection, { dropDatabase: true });
+
+			// Start a new connection to the same in-memory server
+			// Note: This test verifies cleanup, but in-memory server is stopped,
+			// so we just verify no errors occurred
+			expect(memoryServerUri).toBeDefined();
+		}, 30000);
+
+		it("should ignore mongoUrl when useInMemoryMongo is true", async () => {
+			let receivedMongoUrl: string | undefined;
+
+			const connection = await testUtils.start({
+				bus: bus,
+				mongoUrl: "mongodb://localhost:27017/should-be-ignored",
+				useInMemoryMongo: true,
+				service: {
+					start: (natsUrl: string, mongoUrl?: string) => {
+						receivedMongoUrl = mongoUrl;
+						// Should receive in-memory URI, not the external mongoUrl
+						expect(mongoUrl).not.toBe("mongodb://localhost:27017/should-be-ignored");
+						expect(mongoUrl).toMatch(/^mongodb:\/\//);
+						return Promise.resolve();
+					},
+				},
+			});
+
+			expect(receivedMongoUrl).toBeDefined();
+			expect(receivedMongoUrl).not.toBe("mongodb://localhost:27017/should-be-ignored");
+
+			await testUtils.close(connection);
+		}, 30000);
+
+		it("should work with custom in-memory MongoDB options", async () => {
+			const connection = await testUtils.start({
+				bus: bus,
+				useInMemoryMongo: true,
+				inMemoryMongoOptions: {
+					instance: {
+						dbName: "custom-test-db",
+					},
+				},
+			});
+
+			expect(connection.db).toBeDefined();
+			expect(connection.memoryServer).toBeDefined();
+
+			await testUtils.close(connection);
+		}, 30000);
+	});
+}

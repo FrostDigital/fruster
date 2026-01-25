@@ -2,18 +2,16 @@
   "mode": "pre",
   "tag": "alpha",
   "initialVersions": {
-    "@fruster/bus": "1.2.0-alpha.1",
-    "@fruster/decorators": "1.2.0-alpha.1",
+    "@fruster/bus": "1.2.0",
+    "@fruster/decorators": "1.2.0",
     "demo-app": "1.2.0-alpha.1",
-    "@fruster/health": "1.2.0-alpha.2",
-    "@fruster/log": "1.2.0-alpha.2",
-    "@fruster/runner": "1.2.0-alpha.2",
-    "@fruster/test-utils": "1.2.0-alpha.2",
-    "@fruster/ts-transformer": "1.2.0-alpha.1"
+    "@fruster/health": "1.2.0",
+    "@fruster/log": "1.2.0",
+    "@fruster/runner": "1.2.0",
+    "@fruster/test-utils": "1.2.0",
+    "@fruster/ts-transformer": "1.2.0"
   },
   "changesets": [
-    "fix-workspace-protocol",
-    "jasmine-spec-filtering",
-    "migrate-to-pnpm"
+    "mongodb-support-minor"
   ]
 }

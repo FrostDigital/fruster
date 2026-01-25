@@ -15,6 +15,12 @@ interface DuckMongoClient {
 	close(): Promise<void>;
 }
 
+// Duck-typed MongoMemoryServer to avoid hard dependency
+interface DuckMongoMemoryServer {
+	getUri(): string;
+	stop(): Promise<boolean>;
+}
+
 interface ServiceWithStart {
 	[x: string]: any;
 	start: ((natsUrl: string, mongoUrl?: string) => any);
@@ -54,10 +60,54 @@ export interface FrusterTestUtilsOptions {
 	) => void | Promise<void>;
 	/**
 	 * MongoDB connection URL. Requires mongodb package to be installed.
+	 * Ignored if useInMemoryMongo is true.
 	 */
 	mongoUrl?: string;
 	/**
-	 * Whether to drop the database when stopping. Only applies if mongoUrl is provided.
+	 * Whether to use in-memory MongoDB (mongodb-memory-server).
+	 * Requires mongodb-memory-server package to be installed.
+	 * If true, mongoUrl is ignored and an in-memory server is started.
+	 */
+	useInMemoryMongo?: boolean;
+	/**
+	 * Configuration for in-memory MongoDB server.
+	 * Only used when useInMemoryMongo is true.
+	 */
+	inMemoryMongoOptions?: {
+		/**
+		 * Binary configuration for mongodb-memory-server
+		 */
+		binary?: {
+			/**
+			 * MongoDB version to use (e.g., "7.0.0", "6.0.0")
+			 * Default: latest stable version
+			 */
+			version?: string;
+		};
+		/**
+		 * Instance configuration for mongodb-memory-server
+		 */
+		instance?: {
+			/**
+			 * Port for the in-memory MongoDB server
+			 * Default: random available port
+			 */
+			port?: number;
+			/**
+			 * Database name
+			 * Default: "test"
+			 */
+			dbName?: string;
+			/**
+			 * Storage engine to use
+			 * Default: "ephemeralForTest" (fastest for testing)
+			 */
+			storageEngine?: "ephemeralForTest" | "wiredTiger";
+		};
+	};
+	/**
+	 * Whether to drop the database when stopping.
+	 * Works with both external MongoDB (mongoUrl) and in-memory MongoDB (useInMemoryMongo).
 	 */
 	dropDatabase?: boolean;
 	/**
@@ -81,6 +131,10 @@ export interface FrusterTestUtilsOptions {
 export interface FrusterTestUtilsConnection {
 	db?: DuckDb;
 	client?: DuckMongoClient;
+	/**
+	 * In-memory MongoDB server instance (if useInMemoryMongo was true)
+	 */
+	memoryServer?: DuckMongoMemoryServer;
 	port: number;
 	server: any;
 	natsUrl: string;
@@ -91,6 +145,7 @@ export interface FrusterTestUtilsConnection {
 interface FrusterTestUtilsConnectionBuilder {
 	db?: DuckDb;
 	client?: DuckMongoClient;
+	memoryServer?: DuckMongoMemoryServer;
 	port?: number;
 	server?: any;
 	natsUrl?: string;
@@ -235,9 +290,14 @@ async function startService(
 		}
 
 		if (connection.natsUrl) {
-			if (opts.mongoUrl) {
+			// Determine MongoDB URL: either from memory server or external URL
+			const mongoUri = connection.memoryServer
+				? connection.memoryServer.getUri()
+				: opts.mongoUrl;
+
+			if (mongoUri) {
 				// Call with both natsUrl and mongoUrl
-				await opts.service.start(connection.natsUrl, opts.mongoUrl);
+				await opts.service.start(connection.natsUrl, mongoUri);
 			} else {
 				// Call with only natsUrl
 				await opts.service.start(connection.natsUrl);
@@ -250,11 +310,59 @@ async function startService(
 	return connection;
 }
 
+/**
+ * Start an in-memory MongoDB server using mongodb-memory-server
+ */
+async function startInMemoryMongo(
+	opts?: FrusterTestUtilsOptions["inMemoryMongoOptions"]
+): Promise<{
+	uri: string;
+	server: DuckMongoMemoryServer;
+}> {
+	try {
+		// Dynamic import - only loads if mongodb-memory-server is installed
+		const { MongoMemoryServer } = require("mongodb-memory-server");
+
+		const server = await MongoMemoryServer.create({
+			binary: opts?.binary,
+			instance: opts?.instance,
+		});
+
+		const uri = server.getUri();
+		return { uri, server };
+	} catch (error: any) {
+		if (error.code === "MODULE_NOT_FOUND") {
+			throw new Error(
+				'In-memory MongoDB support requires the "mongodb-memory-server" package. ' +
+				"Install it with: pnpm add -D mongodb-memory-server\n" +
+				"Original error: " + error.message
+			);
+		}
+		console.log("Failed starting in-memory MongoDB server", error);
+		throw error;
+	}
+}
+
 async function connectToMongo(
 	opts: FrusterTestUtilsOptions,
 	connection: FrusterTestUtilsConnectionBuilder
 ) {
-	if (!opts.mongoUrl) {
+	// Determine MongoDB URL
+	let mongoUri: string | undefined;
+	let memoryServer: DuckMongoMemoryServer | undefined;
+
+	if (opts.useInMemoryMongo) {
+		// Start in-memory MongoDB server
+		const result = await startInMemoryMongo(opts.inMemoryMongoOptions);
+		mongoUri = result.uri;
+		memoryServer = result.server;
+		connection.memoryServer = memoryServer;
+	} else if (opts.mongoUrl) {
+		// Use external MongoDB URL
+		mongoUri = opts.mongoUrl;
+	}
+
+	if (!mongoUri) {
 		return connection;
 	}
 
@@ -263,21 +371,30 @@ async function connectToMongo(
 		const mongodb = require("mongodb");
 		const MongoClient = mongodb.MongoClient;
 
-		const client = new MongoClient(opts.mongoUrl);
+		const client = new MongoClient(mongoUri);
 		await client.connect();
 
 		connection.db = client.db();
 		connection.client = client;
 		return connection;
 	} catch (error: any) {
-		if (error.code === 'MODULE_NOT_FOUND') {
+		// Clean up memory server if connection failed
+		if (memoryServer) {
+			try {
+				await memoryServer.stop();
+			} catch (e) {
+				console.log("Failed stopping memory server after connection error", e);
+			}
+		}
+
+		if (error.code === "MODULE_NOT_FOUND") {
 			throw new Error(
 				'MongoDB support requires the "mongodb" package to be installed. ' +
-				'Install it with: pnpm add mongodb (or pnpm add -D mongodb for test-only usage)\n' +
-				'Original error: ' + error.message
+				"Install it with: pnpm add mongodb (or pnpm add -D mongodb for test-only usage)\n" +
+				"Original error: " + error.message
 			);
 		}
-		console.log(`Test utils failed connecting to mongo on ${opts.mongoUrl}`, error);
+		console.log(`Test utils failed connecting to mongo on ${mongoUri}`, error);
 		throw error;
 	}
 }
@@ -362,6 +479,15 @@ export async function stop(
 			await connection.client?.close();
 		} catch (e) {
 			console.log("Failed closing MongoDB connection", e);
+		}
+	}
+
+	// Stop in-memory MongoDB server if running
+	if (connection.memoryServer) {
+		try {
+			await connection.memoryServer.stop();
+		} catch (e) {
+			console.log("Failed stopping in-memory MongoDB server", e);
 		}
 	}
 }
