@@ -30,7 +30,6 @@
     "@fruster/log": "workspace:*",
     "@fruster/ts-transformer": "workspace:*",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.0",
     "uuid": "^8.3.2"
   },
   "publishConfig": {

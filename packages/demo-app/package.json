@@ -34,8 +34,5 @@
     "jasmine-spec-reporter": "^7.0.0",
     "mongodb": "^7.0.0",
     "mongodb-memory-server": "^11.0.1"
-  },
-  "peerDependencies": {
-    "typescript": "^5.9.0"
   }
 }
