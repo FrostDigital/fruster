@@ -11,7 +11,9 @@ import * as uuid from "uuid";
  *
  * This demonstrates how to:
  * - Use in-memory MongoDB for fast, isolated tests
- * - Seed test data in the database
+ * - Start service once with startBeforeAll for speed
+ * - Clean database between tests with dropCollectionsBeforeEach
+ * - Seed test data before each test for isolation
  * - Test actual CRUD operations through handlers
  * - Verify 404 responses when data doesn't exist
  */
@@ -24,27 +26,30 @@ describe("CarHandler", () => {
   // Increase timeout for first-time MongoDB binary download
   jasmine.DEFAULT_TIMEOUT_INTERVAL = 120000;
 
-  startBeforeAll({
+  const testHelpers = startBeforeAll({
     mockNats: true,
     bus,
     useInMemoryMongo: true, // Use in-memory MongoDB
-    dropDatabase: true, // Clean up after tests
     service: (conn) => {
       connection = conn;
       return start(conn.natsUrl, conn.memoryServer?.getUri());
     },
-    afterStart: async (conn) => {
-      // Seed test data with proper UUIDs
-      volvoId = uuid.v4();
-      teslaId = uuid.v4();
-      bmwId = uuid.v4();
+  });
 
-      await conn.db?.collection("cars").insertMany([
-        { id: volvoId, brand: "Volvo", model: "XC90" },
-        { id: teslaId, brand: "Tesla", model: "Model 3" },
-        { id: bmwId, brand: "BMW", model: "X5" },
-      ]);
-    },
+  // Clean database between tests for isolation
+  testHelpers.dropCollectionsBeforeEach();
+
+  beforeEach(async () => {
+    // Seed test data with proper UUIDs before each test
+    volvoId = uuid.v4();
+    teslaId = uuid.v4();
+    bmwId = uuid.v4();
+
+    await connection.db?.collection("cars").insertMany([
+      { id: volvoId, brand: "Volvo", model: "XC90" },
+      { id: teslaId, brand: "Tesla", model: "Model 3" },
+      { id: bmwId, brand: "BMW", model: "X5" },
+    ]);
   });
 
   it("should get car by id from database", async () => {

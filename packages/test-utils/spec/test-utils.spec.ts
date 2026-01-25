@@ -153,52 +153,6 @@ if (mongoDbAvailable && !process.env.CI) {
 			await testUtils.close(connection);
 		});
 
-		it("should log warning when trying to drop external database (safety feature)", async () => {
-			// Spy on console.warn to verify the warning is logged
-			const originalWarn = console.warn;
-			let warningLogged = false;
-			let warningMessage = "";
-			console.warn = (...args: any[]) => {
-				const message = args.join(" ");
-				if (message.includes("dropDatabase is set to true")) {
-					warningLogged = true;
-					warningMessage = message;
-				}
-				originalWarn.apply(console, args);
-			};
-
-			const connection = await testUtils.start({
-				bus: bus,
-				mongoUrl: "mongodb://localhost:27017/fruster-test-util-safety-test",
-			});
-
-			// Insert a document
-			await connection.db?.collection("test").insertOne({ test: "should-not-be-deleted" });
-
-			// Try to close with dropDatabase: true (should NOT drop for external MongoDB)
-			await testUtils.close(connection, { dropDatabase: true });
-
-			// Restore console.warn
-			console.warn = originalWarn;
-
-			// Verify warning was logged
-			expect(warningLogged).toBe(true);
-			expect(warningMessage).toContain("dropDatabase is set to true but you're using an external MongoDB");
-
-			// Reconnect and verify data still exists (was NOT dropped)
-			const connection2 = await testUtils.start({
-				bus: bus,
-				mongoUrl: "mongodb://localhost:27017/fruster-test-util-safety-test",
-			});
-
-			const doc = await connection2.db?.collection("test").findOne({ test: "should-not-be-deleted" });
-			expect(doc).toBeDefined();
-			expect(doc?.test).toBe("should-not-be-deleted");
-
-			// Manual cleanup
-			await connection2.db?.collection("test").deleteMany({});
-			await testUtils.close(connection2);
-		});
 	});
 }
 
@@ -264,24 +218,6 @@ if (mongoMemoryServerAvailable && mongoDbAvailable && !process.env.CI) {
 			await testUtils.close(connection);
 		}, 30000);
 
-		it("should drop in-memory database when dropDatabase option is true", async () => {
-			const connection = await testUtils.start({
-				bus: bus,
-				useInMemoryMongo: true,
-			});
-
-			// Insert a document
-			await connection.db?.collection("test").insertOne({ test: "data" });
-
-			const memoryServerUri = connection.memoryServer?.getUri();
-
-			await testUtils.close(connection, { dropDatabase: true });
-
-			// Start a new connection to the same in-memory server
-			// Note: This test verifies cleanup, but in-memory server is stopped,
-			// so we just verify no errors occurred
-			expect(memoryServerUri).toBeDefined();
-		}, 30000);
 
 		it("should ignore mongoUrl when useInMemoryMongo is true", async () => {
 			let receivedMongoUrl: string | undefined;

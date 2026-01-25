@@ -7,6 +7,7 @@ const nsc = require("nats-server-control");
 interface DuckDb {
 	dropDatabase(): Promise<any>;
 	collection(name: string): any;
+	listCollections(): any;
 }
 
 interface DuckMongoClient {
@@ -106,11 +107,6 @@ export interface FrusterTestUtilsOptions {
 		};
 	};
 	/**
-	 * Whether to drop the database when stopping.
-	 * Works with both external MongoDB (mongoUrl) and in-memory MongoDB (useInMemoryMongo).
-	 */
-	dropDatabase?: boolean;
-	/**
 	 * Optional nats port, if none is provided this will be randomized.
 	 */
 	natsPort?: number;
@@ -158,7 +154,7 @@ export function startBeforeEach(options: FrusterTestUtilsOptions) {
 }
 
 export function startBeforeAll(options: FrusterTestUtilsOptions) {
-	startBefore(beforeAll, afterAll, options);
+	return startBefore(beforeAll, afterAll, options);
 }
 
 /**
@@ -170,41 +166,108 @@ function startBefore(
 	afterFn: AfterFn,
 	options: FrusterTestUtilsOptions
 ) {
-	return new Promise((resolve) => {
-		let connection: FrusterTestUtilsConnection;
+	let connection: FrusterTestUtilsConnection;
 
-		beforeFn(async () => {
-			try {
-				if (options.beforeStart) {
-					await options.beforeStart();
-				}
-
-				connection = await start(options);
-
-				if (options.afterStart) {
-					await options.afterStart(connection);
-				}
-
-				resolve(connection);
-			} catch (err) {
-				console.log("Failed beforeEach/All with error:", err);
-				fail();
-			}
-		});
-
-		afterFn(async () => {
-			try {
-				if (options.beforeStop) {
-					await options.beforeStop(connection);
-				}
-			} catch (err) {
-				console.log("Failed beforeStop with error:", err);
-				fail();
+	beforeFn(async () => {
+		try {
+			if (options.beforeStart) {
+				await options.beforeStart();
 			}
 
-			await stop(connection, options);
-		});
+			connection = await start(options);
+
+			if (options.afterStart) {
+				await options.afterStart(connection);
+			}
+		} catch (err) {
+			console.log("Failed beforeEach/All with error:", err);
+			fail();
+		}
 	});
+
+	afterFn(async () => {
+		try {
+			if (options.beforeStop) {
+				await options.beforeStop(connection);
+			}
+		} catch (err) {
+			console.log("Failed beforeStop with error:", err);
+			fail();
+		}
+
+		await stop(connection, options);
+	});
+
+	// Return a helper object with cleanup methods bound to this connection
+	return {
+		connection: () => connection,
+		cleanupBeforeEach: (
+			cleanup: (connection: FrusterTestUtilsConnection) => Promise<void> | void
+		) => {
+			beforeEach(async () => {
+				try {
+					await cleanup(connection);
+				} catch (err) {
+					console.log("Failed cleanup before each with error:", err);
+					fail();
+				}
+			});
+		},
+		dropDatabaseBeforeEach: () => {
+			beforeEach(async () => {
+				try {
+					if (!connection.db) {
+						return;
+					}
+
+					// Only allow dropping in-memory databases for safety
+					if (!connection.memoryServer) {
+						console.warn(
+							"⚠️  WARNING: dropDatabaseBeforeEach only works with in-memory MongoDB (useInMemoryMongo: true). " +
+							"For safety, it will not drop external databases. " +
+							"Use cleanupBeforeEach() with custom logic for external databases."
+						);
+						return;
+					}
+
+					await connection.db.dropDatabase();
+				} catch (err) {
+					console.log("Failed dropping database before each with error:", err);
+					fail();
+				}
+			});
+		},
+		dropCollectionsBeforeEach: () => {
+			beforeEach(async () => {
+				try {
+					if (!connection.db) {
+						return;
+					}
+
+					// Only allow dropping in-memory databases for safety
+					if (!connection.memoryServer) {
+						console.warn(
+							"⚠️  WARNING: dropCollectionsBeforeEach only works with in-memory MongoDB (useInMemoryMongo: true). " +
+							"For safety, it will not drop collections from external databases. " +
+							"Use cleanupBeforeEach() with custom logic for external databases."
+						);
+						return;
+					}
+
+					const collections = await connection.db.listCollections().toArray();
+
+					await Promise.all(
+						collections.map((col: any) =>
+							connection.db!.collection(col.name).drop()
+						)
+					);
+				} catch (err) {
+					console.log("Failed dropping collections before each with error:", err);
+					fail();
+				}
+			});
+		},
+	};
 }
 
 /**
@@ -490,7 +553,7 @@ export async function startNatsServer(
 }
 
 /**
- * Stop nats, close fruster bus connection(s) and drop database (if configured)
+ * Stop nats, close fruster bus connection(s) and close MongoDB connections
  */
 export async function stop(
 	connection: Partial<FrusterTestUtilsConnection>,
@@ -512,25 +575,6 @@ export async function stop(
 
 	// MongoDB cleanup
 	if (connection.client) {
-		if (options?.dropDatabase) {
-			// Only allow dropDatabase with in-memory MongoDB
-			if (connection.memoryServer) {
-				try {
-					await connection.db?.dropDatabase();
-				} catch (e) {
-					console.log("Failed dropping database", e);
-				}
-			} else {
-				// Warn if trying to drop a real MongoDB database
-				console.warn(
-					"⚠️  WARNING: dropDatabase is set to true but you're using an external MongoDB connection. " +
-					"For safety, dropDatabase only works with in-memory MongoDB (useInMemoryMongo: true). " +
-					"Your database will NOT be dropped. " +
-					"If you need to clean a real database, do it manually in beforeStop/afterStart hooks."
-				);
-			}
-		}
-
 		try {
 			await connection.client?.close();
 		} catch (e) {

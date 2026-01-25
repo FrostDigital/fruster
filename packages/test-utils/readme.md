@@ -87,6 +87,80 @@ describe("Foo spec", () => {
 });
 ```
 
+## Database Cleanup Between Tests
+
+When using `startBeforeAll()` to start your service once for the entire test suite, you can use cleanup helpers to clean the database between tests without restarting the service. This provides better test isolation while maintaining fast test execution.
+
+### Drop Collections Between Tests
+
+The recommended approach for cleaning between tests. Drops all collections but preserves indexes:
+
+```javascript
+describe("Foo spec", () => {
+	const testHelpers = testUtils.startBeforeAll({
+		service: service,
+		bus: bus,
+		useInMemoryMongo: true
+	});
+
+	// Clean database between tests
+	testHelpers.dropCollectionsBeforeEach();
+
+	it("test 1", async () => {
+		// Database is clean
+		await connection.db.collection("users").insertOne({ name: "Alice" });
+	});
+
+	it("test 2", async () => {
+		// Database is clean again
+		const count = await connection.db.collection("users").countDocuments();
+		expect(count).toBe(0);
+	});
+});
+```
+
+### Drop Database Between Tests
+
+Drops the entire database between tests (slower than dropping collections):
+
+```javascript
+describe("Foo spec", () => {
+	const testHelpers = testUtils.startBeforeAll({
+		service: service,
+		bus: bus,
+		useInMemoryMongo: true
+	});
+
+	testHelpers.dropDatabaseBeforeEach();
+
+	// Your tests...
+});
+```
+
+### Custom Cleanup Logic
+
+For more control, use custom cleanup logic:
+
+```javascript
+describe("Foo spec", () => {
+	const testHelpers = testUtils.startBeforeAll({
+		service: service,
+		bus: bus,
+		useInMemoryMongo: true
+	});
+
+	// Only clean specific collections
+	testHelpers.cleanupBeforeEach(async (connection) => {
+		await connection.db?.collection("users").deleteMany({});
+		await connection.db?.collection("orders").deleteMany({});
+	});
+
+	// Your tests...
+});
+```
+
+**Important Safety Note:** `dropDatabaseBeforeEach()` and `dropCollectionsBeforeEach()` only work with in-memory MongoDB (`useInMemoryMongo: true`) to prevent accidentally dropping real databases. For external databases, use `cleanupBeforeEach()` with custom logic.
+
 ## MongoDB Support (Optional)
 
 The test-utils package supports MongoDB connections, but does not include MongoDB as a dependency. If you need MongoDB support in your tests:
@@ -115,7 +189,6 @@ describe("Foo spec", () => {
 		service: service,
 		bus: bus,
 		mongoUrl: "mongodb://localhost:27017/test-db",
-		dropDatabase: true,  // Drops database after each test
 		afterStart: (connection) => {
 			// Access MongoDB database
 			const users = connection.db.collection("users");
@@ -144,41 +217,9 @@ await connection.db.collection("users").insertOne({ name: "John" });
 await testUtils.close(connection);
 ```
 
-### Drop Database After Tests
+### Clean Database Between Tests
 
-**Important Safety Notice:** The `dropDatabase` option only works with in-memory MongoDB (`useInMemoryMongo: true`) for safety reasons. It will NOT drop external MongoDB databases.
-
-```javascript
-// ❌ This will NOT drop the database (safety feature)
-testUtils.startBeforeEach({
-	service: service,
-	bus: bus,
-	mongoUrl: "mongodb://localhost:27017/test-db",
-	dropDatabase: true  // Warning logged, database NOT dropped
-});
-
-// ✅ This WILL drop the database (safe with in-memory)
-testUtils.startBeforeEach({
-	service: service,
-	bus: bus,
-	useInMemoryMongo: true,
-	dropDatabase: true  // Database dropped after each test
-});
-```
-
-If you need to clean an external database, do it manually in hooks:
-
-```javascript
-testUtils.startBeforeEach({
-	service: service,
-	bus: bus,
-	mongoUrl: "mongodb://localhost:27017/test-db",
-	beforeStop: async (connection) => {
-		// Manually drop specific collections if needed
-		await connection.db?.collection("test-data").deleteMany({});
-	}
-});
-```
+For cleaning database state between tests, use the cleanup helpers instead of restarting the entire service. See the "Database Cleanup Between Tests" section above for details.
 
 ### Error Handling
 
@@ -213,17 +254,14 @@ Enable in-memory MongoDB with the `useInMemoryMongo` option:
 
 ```javascript
 describe("Foo spec", () => {
-	testUtils.startBeforeEach({
+	const testHelpers = testUtils.startBeforeAll({
 		service: service,
 		bus: bus,
 		useInMemoryMongo: true,  // Start in-memory MongoDB
-		dropDatabase: true,       // Clean database after each test
-		afterStart: (connection) => {
-			// Access MongoDB database (just like with external MongoDB)
-			const users = connection.db.collection("users");
-			return users.insertOne({ name: "test" });
-		},
 	});
+
+	// Clean database between tests
+	testHelpers.dropCollectionsBeforeEach();
 
 	it("should work with in-memory MongoDB", async () => {
 		// Your test code here
@@ -285,7 +323,7 @@ await testUtils.close(connection);  // Automatically stops the memory server
 - The in-memory server is automatically started before connecting to MongoDB
 - The in-memory server is automatically stopped when calling `testUtils.close()` or `testUtils.stop()`
 - Each test run gets a fresh, isolated MongoDB instance
-- **Safety Feature:** The `dropDatabase` option **only works with in-memory MongoDB**. It will not drop external databases to prevent accidental data loss
+- **Safety Feature:** The cleanup helpers (`dropDatabaseBeforeEach()` and `dropCollectionsBeforeEach()`) **only work with in-memory MongoDB**. They will not drop external databases to prevent accidental data loss
 
 ### TypeScript Support
 
@@ -340,18 +378,19 @@ testUtils.startBeforeEach({
 	service: service,
 	bus: bus,
 	mongoUrl: "mongodb://localhost:27017/test-db",
-	dropDatabase: true,
 });
 ```
 
 **After:**
 ```javascript
-testUtils.startBeforeEach({
+const testHelpers = testUtils.startBeforeAll({
 	service: service,
 	bus: bus,
-	useInMemoryMongo: true,  // Just change this!
-	dropDatabase: true,       // Everything else stays the same
+	useInMemoryMongo: true,  // Use in-memory MongoDB
 });
+
+// Clean database between tests
+testHelpers.dropCollectionsBeforeEach();
 ```
 
 All your existing test code using `connection.db` and `connection.client` will work without changes.
