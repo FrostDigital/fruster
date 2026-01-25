@@ -131,4 +131,45 @@ describe("Cleanup helpers", () => {
 			expect(productCount).toBe(1); // Still has the product from previous test
 		});
 	});
+
+	describe("unsubscribeMocksBeforeEach", () => {
+		let connection: any;
+
+		const testHelpers = testUtils.startBeforeAll({
+			bus,
+			mockNats: true,
+			afterStart: (conn) => {
+				connection = conn;
+			},
+		});
+
+		testHelpers.unsubscribeMocksBeforeEach();
+
+		it("should create and track mock service", () => {
+			const mock = testHelpers.mockService({
+				subject: "test-service.get-data",
+				response: { data: { value: "test1" } },
+			});
+
+			expect(mock).toBeDefined();
+			expect(typeof mock.unsubscribe).toBe("function");
+		});
+
+		it("should have cleaned up mock from previous test", async () => {
+			// Create a new mock with the same subject - this should work
+			// because the previous mock was cleaned up
+			const mock = testHelpers.mockService({
+				subject: "test-service.get-data",
+				response: { data: { value: "test2" } },
+			});
+
+			const response = await bus.request({
+				subject: "test-service.get-data",
+				message: { data: {} },
+			});
+
+			// Should get the new mock's response, not the old one
+			expect(response.data.value).toBe("test2");
+		});
+	});
 });

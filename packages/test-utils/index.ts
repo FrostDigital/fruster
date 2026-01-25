@@ -198,6 +198,9 @@ function startBefore(
 		await stop(connection, options);
 	});
 
+	// Track mock services for cleanup
+	const mockServices: any[] = [];
+
 	// Return a helper object with cleanup methods bound to this connection
 	return {
 		connection: () => connection,
@@ -266,6 +269,50 @@ function startBefore(
 					fail();
 				}
 			});
+		},
+		/**
+		 * Unsubscribe all mock services created between tests.
+		 * Use this to clean up mock subscriptions when using startBeforeAll().
+		 *
+		 * Example:
+		 * ```typescript
+		 * const helpers = testUtils.startBeforeAll({ bus, mockNats: true });
+		 * helpers.unsubscribeMocksBeforeEach();
+		 *
+		 * it("test 1", () => {
+		 *   const mock = helpers.mockService({ subject: "foo", response: { data: "bar" } });
+		 *   // mock is automatically tracked and will be cleaned up
+		 * });
+		 * ```
+		 */
+		unsubscribeMocksBeforeEach: () => {
+			beforeEach(() => {
+				try {
+					mockServices.forEach((mock) => {
+						if (mock && typeof mock.unsubscribe === "function") {
+							mock.unsubscribe();
+						}
+					});
+					mockServices.length = 0; // Clear the array
+				} catch (err) {
+					console.log("Failed unsubscribing mocks before each with error:", err);
+					fail();
+				}
+			});
+		},
+		/**
+		 * Create a mock service that will be automatically cleaned up with unsubscribeMocksBeforeEach().
+		 * This is a convenience wrapper around testUtils.mockService() that tracks the mock.
+		 */
+		mockService: <T = any>(
+			options: Omit<MockServiceOpts<T>, "bus">
+		) => {
+			const mock = new MockService<T>({
+				...options,
+				bus: connection.bus,
+			});
+			mockServices.push(mock);
+			return mock;
 		},
 	};
 }

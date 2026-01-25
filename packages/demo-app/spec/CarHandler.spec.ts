@@ -13,9 +13,11 @@ import * as uuid from "uuid";
  * - Use in-memory MongoDB for fast, isolated tests
  * - Start service once with startBeforeAll for speed
  * - Clean database between tests with dropCollectionsBeforeEach
+ * - Clean mock subscriptions with unsubscribeMocksBeforeEach
  * - Seed test data before each test for isolation
  * - Test actual CRUD operations through handlers
  * - Verify 404 responses when data doesn't exist
+ * - Use mock services that are automatically cleaned up
  */
 describe("CarHandler", () => {
   let connection: any;
@@ -36,8 +38,9 @@ describe("CarHandler", () => {
     },
   });
 
-  // Clean database between tests for isolation
+  // Clean database and mocks between tests for isolation
   testHelpers.dropCollectionsBeforeEach();
+  testHelpers.unsubscribeMocksBeforeEach();
 
   beforeEach(async () => {
     // Seed test data with proper UUIDs before each test
@@ -132,5 +135,41 @@ describe("CarHandler", () => {
     expect(data.id).toBe(carId);
     expect(data.brand).toBe("Mercedes");
     expect(data.model).toBe("C-Class");
+  });
+
+  it("should work with mock services that are automatically cleaned up", async () => {
+    // Create a mock for an external service
+    const inventoryMock = testHelpers.mockService({
+      subject: "inventory-service.check-availability",
+      response: { data: { available: true, quantity: 5 } },
+    });
+
+    // Simulate calling the mock
+    const response = await testBus.request({
+      subject: "inventory-service.check-availability",
+      message: { data: { carId: volvoId } },
+    });
+
+    expect(response.data.available).toBe(true);
+    expect(response.data.quantity).toBe(5);
+    expect(inventoryMock.invocations).toBe(1);
+  });
+
+  it("should have cleaned up previous test's mock", async () => {
+    // Create a new mock with the same subject - this works because
+    // the previous mock was automatically cleaned up
+    const inventoryMock = testHelpers.mockService({
+      subject: "inventory-service.check-availability",
+      response: { data: { available: false, quantity: 0 } },
+    });
+
+    const response = await testBus.request({
+      subject: "inventory-service.check-availability",
+      message: { data: { carId: teslaId } },
+    });
+
+    // Should get the new mock's response, not the previous one
+    expect(response.data.available).toBe(false);
+    expect(response.data.quantity).toBe(0);
   });
 });

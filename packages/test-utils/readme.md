@@ -161,6 +161,41 @@ describe("Foo spec", () => {
 
 **Important Safety Note:** `dropDatabaseBeforeEach()` and `dropCollectionsBeforeEach()` only work with in-memory MongoDB (`useInMemoryMongo: true`) to prevent accidentally dropping real databases. For external databases, use `cleanupBeforeEach()` with custom logic.
 
+### Clean Up Mock Subscriptions
+
+When using `startBeforeAll()`, mock services created with `mockService()` persist across tests. Use the cleanup helper to automatically unsubscribe mocks between tests:
+
+```javascript
+describe("Foo spec", () => {
+	const testHelpers = testUtils.startBeforeAll({
+		service: service,
+		bus: bus,
+		mockNats: true
+	});
+
+	// Automatically unsubscribe all mocks before each test
+	testHelpers.unsubscribeMocksBeforeEach();
+
+	it("test 1", () => {
+		const mock = testHelpers.mockService({
+			subject: "user-service.get-user",
+			response: { data: { id: 1, name: "John" } }
+		});
+		// Mock is automatically tracked and cleaned up
+	});
+
+	it("test 2", () => {
+		// Previous mock is gone, can create new mock with same subject
+		const mock = testHelpers.mockService({
+			subject: "user-service.get-user",
+			response: { data: { id: 2, name: "Jane" } }
+		});
+	});
+});
+```
+
+**Note:** Use `testHelpers.mockService()` instead of `testUtils.mockService()` to enable automatic cleanup tracking.
+
 ## MongoDB Support (Optional)
 
 The test-utils package supports MongoDB connections, but does not include MongoDB as a dependency. If you need MongoDB support in your tests:
