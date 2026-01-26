@@ -1,5 +1,13 @@
 # @fruster/runner
 
+## 1.3.0-alpha.4
+
+### Patch Changes
+
+- @fruster/log@1.3.0-alpha.4
+- @fruster/bus@1.3.0-alpha.4
+- @fruster/ts-transformer@1.3.0-alpha.4
+
 ## 1.3.0-alpha.3
 
 ### Patch Changes

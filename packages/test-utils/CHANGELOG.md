@@ -1,5 +1,12 @@
 # @fruster/test-utils
 
+## 1.3.0-alpha.4
+
+### Patch Changes
+
+- Fix mock cleanup helper to use global tracking. Move allMockServices array outside function scope to enable reliable cleanup across all test suites. Add unsubscribeMocks() public function and automatic tracking for all mockService() calls.
+  - @fruster/bus@1.3.0-alpha.4
+
 ## 1.3.0-alpha.3
 
 ### Patch Changes
