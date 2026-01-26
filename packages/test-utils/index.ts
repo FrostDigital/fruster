@@ -636,26 +636,8 @@ export async function startNatsServer(
 		throw error;
 	}
 
-	try {
-		connection.server = await nsc.startServer(natsServerPort);
-		return connection;
-	} catch (err: any) {
-		// Provide helpful error message for missing NATS server
-		if (err.message && err.message.includes("Can't find the")) {
-			const enhancedError = new Error(
-				"NATS server binary not found. " +
-					"Install NATS server from https://docs.nats.io/running-a-nats-service/introduction/installation " +
-					"or use mockNats: true option for in-memory testing. " +
-					"Original error: " +
-					err.message,
-			);
-			(enhancedError as any).code = "NATS_NOT_INSTALLED";
-			throw enhancedError;
-		}
-
-		console.log(`Failed starting NATS server on port ${anAvailablePort}`);
-		throw err;
-	}
+	connection.server = await nsc.startServer(natsServerPort);
+	return connection;
 }
 
 /**
