@@ -1,5 +1,5 @@
 import bus, { testBus } from "@fruster/bus";
-import { startBeforeAll } from "@fruster/test-utils";
+import { startBeforeAll, mockService as testUtilsMockService } from "@fruster/test-utils";
 import { start } from "../demo-service";
 import { GetCarRequest } from "../lib/handlers/GetCarHandler";
 import { CreateCarRequest } from "../lib/handlers/CreateCarHandler";
@@ -139,7 +139,7 @@ describe("CarHandler", () => {
 
   it("should work with mock services that are automatically cleaned up", async () => {
     // Create a mock for an external service
-    const inventoryMock = testHelpers.mockService({
+    const inventoryMock = testUtilsMockService({
       subject: "inventory-service.check-availability",
       response: { data: { available: true, quantity: 5 } },
     });
@@ -158,7 +158,7 @@ describe("CarHandler", () => {
   it("should have cleaned up previous test's mock", async () => {
     // Create a new mock with the same subject - this works because
     // the previous mock was automatically cleaned up
-    const inventoryMock = testHelpers.mockService({
+    const inventoryMock = testUtilsMockService({
       subject: "inventory-service.check-availability",
       response: { data: { available: false, quantity: 0 } },
     });
