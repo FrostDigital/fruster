@@ -24,7 +24,7 @@ interface DuckMongoMemoryServer {
 
 interface ServiceWithStart {
 	[x: string]: any;
-	start: ((natsUrl: string, mongoUrl?: string) => any);
+	start: (natsUrl: string, mongoUrl?: string) => any;
 }
 
 let bus: fBus.FrusterBus;
@@ -51,13 +51,13 @@ export interface FrusterTestUtilsOptions {
 	 * Function to run after start.
 	 */
 	afterStart?: (
-		connection: FrusterTestUtilsConnection
+		connection: FrusterTestUtilsConnection,
 	) => void | Promise<void>;
 	/**
 	 * Function to run before stopping.
 	 */
 	beforeStop?: (
-		connection: FrusterTestUtilsConnection
+		connection: FrusterTestUtilsConnection,
 	) => void | Promise<void>;
 	/**
 	 * MongoDB connection URL. Requires mongodb package to be installed.
@@ -164,7 +164,7 @@ export function startBeforeAll(options: FrusterTestUtilsOptions) {
 function startBefore(
 	beforeFn: BeforeFn,
 	afterFn: AfterFn,
-	options: FrusterTestUtilsOptions
+	options: FrusterTestUtilsOptions,
 ) {
 	let connection: FrusterTestUtilsConnection;
 
@@ -198,14 +198,13 @@ function startBefore(
 		await stop(connection, options);
 	});
 
-	// Track mock services for cleanup
-	const mockServices: any[] = [];
-
 	// Return a helper object with cleanup methods bound to this connection
 	return {
 		connection: () => connection,
 		cleanupBeforeEach: (
-			cleanup: (connection: FrusterTestUtilsConnection) => Promise<void> | void
+			cleanup: (
+				connection: FrusterTestUtilsConnection,
+			) => Promise<void> | void,
 		) => {
 			beforeEach(async () => {
 				try {
@@ -227,15 +226,18 @@ function startBefore(
 					if (!connection.memoryServer) {
 						console.warn(
 							"⚠️  WARNING: dropDatabaseBeforeEach only works with in-memory MongoDB (useInMemoryMongo: true). " +
-							"For safety, it will not drop external databases. " +
-							"Use cleanupBeforeEach() with custom logic for external databases."
+								"For safety, it will not drop external databases. " +
+								"Use cleanupBeforeEach() with custom logic for external databases.",
 						);
 						return;
 					}
 
 					await connection.db.dropDatabase();
 				} catch (err) {
-					console.log("Failed dropping database before each with error:", err);
+					console.log(
+						"Failed dropping database before each with error:",
+						err,
+					);
 					fail();
 				}
 			});
@@ -251,21 +253,26 @@ function startBefore(
 					if (!connection.memoryServer) {
 						console.warn(
 							"⚠️  WARNING: dropCollectionsBeforeEach only works with in-memory MongoDB (useInMemoryMongo: true). " +
-							"For safety, it will not drop collections from external databases. " +
-							"Use cleanupBeforeEach() with custom logic for external databases."
+								"For safety, it will not drop collections from external databases. " +
+								"Use cleanupBeforeEach() with custom logic for external databases.",
 						);
 						return;
 					}
 
-					const collections = await connection.db.listCollections().toArray();
+					const collections = await connection.db
+						.listCollections()
+						.toArray();
 
 					await Promise.all(
 						collections.map((col: any) =>
-							connection.db!.collection(col.name).drop()
-						)
+							connection.db!.collection(col.name).drop(),
+						),
 					);
 				} catch (err) {
-					console.log("Failed dropping collections before each with error:", err);
+					console.log(
+						"Failed dropping collections before each with error:",
+						err,
+					);
 					fail();
 				}
 			});
@@ -288,31 +295,15 @@ function startBefore(
 		unsubscribeMocksBeforeEach: () => {
 			beforeEach(() => {
 				try {
-					mockServices.forEach((mock) => {
-						if (mock && typeof mock.unsubscribe === "function") {
-							mock.unsubscribe();
-						}
-					});
-					mockServices.length = 0; // Clear the array
+					unsubscribeMocks();
 				} catch (err) {
-					console.log("Failed unsubscribing mocks before each with error:", err);
+					console.log(
+						"Failed unsubscribing mocks before each with error:",
+						err,
+					);
 					fail();
 				}
 			});
-		},
-		/**
-		 * Create a mock service that will be automatically cleaned up with unsubscribeMocksBeforeEach().
-		 * This is a convenience wrapper around testUtils.mockService() that tracks the mock.
-		 */
-		mockService: <T = any>(
-			options: Omit<MockServiceOpts<T>, "bus">
-		) => {
-			const mock = new MockService<T>({
-				...options,
-				bus: connection.bus,
-			});
-			mockServices.push(mock);
-			return mock;
 		},
 	};
 }
@@ -381,7 +372,7 @@ export async function start(opts: FrusterTestUtilsOptions) {
 
 async function startService(
 	opts: FrusterTestUtilsOptions,
-	connection: FrusterTestUtilsConnectionBuilder
+	connection: FrusterTestUtilsConnectionBuilder,
 ) {
 	if (opts.service) {
 		if (typeof opts.service === "function") {
@@ -395,7 +386,7 @@ async function startService(
 
 		if (!connection.natsUrl) {
 			throw new Error(
-				"Missing natsUrl, either enable mockNats or provide natsUrl"
+				"Missing natsUrl, either enable mockNats or provide natsUrl",
 			);
 		}
 
@@ -424,7 +415,7 @@ async function startService(
  * Start an in-memory MongoDB server using mongodb-memory-server
  */
 async function startInMemoryMongo(
-	opts?: FrusterTestUtilsOptions["inMemoryMongoOptions"]
+	opts?: FrusterTestUtilsOptions["inMemoryMongoOptions"],
 ): Promise<{
 	uri: string;
 	server: DuckMongoMemoryServer;
@@ -444,8 +435,9 @@ async function startInMemoryMongo(
 		if (error.code === "MODULE_NOT_FOUND") {
 			throw new Error(
 				'In-memory MongoDB support requires the "mongodb-memory-server" package. ' +
-				"Install it with: pnpm add -D mongodb-memory-server\n" +
-				"Original error: " + error.message
+					"Install it with: pnpm add -D mongodb-memory-server\n" +
+					"Original error: " +
+					error.message,
 			);
 		}
 		console.log("Failed starting in-memory MongoDB server", error);
@@ -455,7 +447,7 @@ async function startInMemoryMongo(
 
 async function connectToMongo(
 	opts: FrusterTestUtilsOptions,
-	connection: FrusterTestUtilsConnectionBuilder
+	connection: FrusterTestUtilsConnectionBuilder,
 ) {
 	// Determine MongoDB URL
 	let mongoUri: string | undefined;
@@ -493,25 +485,32 @@ async function connectToMongo(
 			try {
 				await memoryServer.stop();
 			} catch (e) {
-				console.log("Failed stopping memory server after connection error", e);
+				console.log(
+					"Failed stopping memory server after connection error",
+					e,
+				);
 			}
 		}
 
 		if (error.code === "MODULE_NOT_FOUND") {
 			throw new Error(
 				'MongoDB support requires the "mongodb" package to be installed. ' +
-				"Install it with: pnpm add mongodb (or pnpm add -D mongodb for test-only usage)\n" +
-				"Original error: " + error.message
+					"Install it with: pnpm add mongodb (or pnpm add -D mongodb for test-only usage)\n" +
+					"Original error: " +
+					error.message,
 			);
 		}
-		console.log(`Test utils failed connecting to mongo on ${mongoUri}`, error);
+		console.log(
+			`Test utils failed connecting to mongo on ${mongoUri}`,
+			error,
+		);
 		throw error;
 	}
 }
 
 async function connectBus(
 	opts: FrusterTestUtilsOptions,
-	connection: FrusterTestUtilsConnectionBuilder
+	connection: FrusterTestUtilsConnectionBuilder,
 ) {
 	bus = opts.bus || bus;
 	if (opts.bus) {
@@ -546,7 +545,7 @@ export function isNatsServerAvailable(): boolean {
 }
 
 export async function startNatsServer(
-	opts?: Pick<FrusterTestUtilsOptions, "natsPort" | "bus">
+	opts?: Pick<FrusterTestUtilsOptions, "natsPort" | "bus">,
 ) {
 	const anAvailablePort = await getPort();
 
@@ -571,8 +570,8 @@ export async function startNatsServer(
 	if (!isNatsServerAvailable()) {
 		const error = new Error(
 			"NATS server is not installed or not in PATH. " +
-			"Install it from https://docs.nats.io/running-a-nats-service/introduction/installation " +
-			"or use mockNats: true option for in-memory testing."
+				"Install it from https://docs.nats.io/running-a-nats-service/introduction/installation " +
+				"or use mockNats: true option for in-memory testing.",
 		);
 		(error as any).code = "NATS_NOT_INSTALLED";
 		throw error;
@@ -586,9 +585,10 @@ export async function startNatsServer(
 		if (err.message && err.message.includes("Can't find the")) {
 			const enhancedError = new Error(
 				"NATS server binary not found. " +
-				"Install NATS server from https://docs.nats.io/running-a-nats-service/introduction/installation " +
-				"or use mockNats: true option for in-memory testing. " +
-				"Original error: " + err.message
+					"Install NATS server from https://docs.nats.io/running-a-nats-service/introduction/installation " +
+					"or use mockNats: true option for in-memory testing. " +
+					"Original error: " +
+					err.message,
 			);
 			(enhancedError as any).code = "NATS_NOT_INSTALLED";
 			throw enhancedError;
@@ -604,7 +604,7 @@ export async function startNatsServer(
  */
 export async function stop(
 	connection: Partial<FrusterTestUtilsConnection>,
-	options?: FrusterTestUtilsOptions
+	options?: FrusterTestUtilsOptions,
 ) {
 	if (connection.bus && connection.bus.closeAll) connection.bus.closeAll();
 
@@ -642,10 +642,12 @@ export async function stop(
 // Alias for stop
 export function close(
 	connection: Partial<FrusterTestUtilsConnection>,
-	options?: FrusterTestUtilsOptions
+	options?: FrusterTestUtilsOptions,
 ) {
 	return stop(connection, options);
 }
+
+let allMockServices: MockService<any>[] = [];
 
 /**
  * Convenient function to mock a service which can be used
@@ -663,16 +665,25 @@ export function close(
  *
  */
 export function mockService<T = any>(
-	options: Omit<MockServiceOpts<T>, "bus"> & { bus?: any }
+	options: Omit<MockServiceOpts<T>, "bus"> & { bus?: any },
 ) {
 	if (!(options.bus || bus)) {
 		throw new Error("Missing bus in mockService");
 	}
 
-	return new MockService<T>({
+	const theMock = new MockService<T>({
 		...options,
 		bus: options.bus || bus,
 	});
+
+	allMockServices.push(theMock);
+
+	return theMock;
+}
+
+export function unsubscribeMocks() {
+	allMockServices.forEach((m) => m.unsubscribe());
+	allMockServices = [];
 }
 
 const TestUtils = {
@@ -684,6 +695,7 @@ const TestUtils = {
 	startBeforeEach,
 	startBeforeAll,
 	mockService,
+	unsubscribeMocks,
 };
 
 export default TestUtils;

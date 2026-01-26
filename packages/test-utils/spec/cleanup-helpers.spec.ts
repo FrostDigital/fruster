@@ -21,7 +21,9 @@ describe("Cleanup helpers", () => {
 	}
 
 	if (!mongoDbAvailable || !mongoMemoryServerAvailable || process.env.CI) {
-		console.log("Skipping cleanup helpers test - mongodb or mongodb-memory-server not installed or running in CI");
+		console.log(
+			"Skipping cleanup helpers test - mongodb or mongodb-memory-server not installed or running in CI",
+		);
 		return;
 	}
 
@@ -44,8 +46,12 @@ describe("Cleanup helpers", () => {
 			expect(collections.length).toBe(0);
 
 			// Insert some data
-			await connection.db.collection("users").insertOne({ name: "Alice" });
-			const count = await connection.db.collection("users").countDocuments();
+			await connection.db
+				.collection("users")
+				.insertOne({ name: "Alice" });
+			const count = await connection.db
+				.collection("users")
+				.countDocuments();
 			expect(count).toBe(1);
 		});
 
@@ -55,8 +61,12 @@ describe("Cleanup helpers", () => {
 			expect(collections.length).toBe(0);
 
 			// Insert different data
-			await connection.db.collection("products").insertOne({ name: "Widget" });
-			const count = await connection.db.collection("products").countDocuments();
+			await connection.db
+				.collection("products")
+				.insertOne({ name: "Widget" });
+			const count = await connection.db
+				.collection("products")
+				.countDocuments();
 			expect(count).toBe(1);
 		});
 	});
@@ -77,7 +87,9 @@ describe("Cleanup helpers", () => {
 
 		it("should have clean database in first test", async () => {
 			await connection.db.collection("users").insertOne({ name: "Bob" });
-			const count = await connection.db.collection("users").countDocuments();
+			const count = await connection.db
+				.collection("users")
+				.countDocuments();
 			expect(count).toBe(1);
 		});
 
@@ -110,11 +122,19 @@ describe("Cleanup helpers", () => {
 		it("should call custom cleanup in first test", async () => {
 			expect(cleanupCalled).toBe(1);
 
-			await connection.db.collection("users").insertOne({ name: "Charlie" });
-			await connection.db.collection("products").insertOne({ name: "Gadget" });
+			await connection.db
+				.collection("users")
+				.insertOne({ name: "Charlie" });
+			await connection.db
+				.collection("products")
+				.insertOne({ name: "Gadget" });
 
-			const userCount = await connection.db.collection("users").countDocuments();
-			const productCount = await connection.db.collection("products").countDocuments();
+			const userCount = await connection.db
+				.collection("users")
+				.countDocuments();
+			const productCount = await connection.db
+				.collection("products")
+				.countDocuments();
 
 			expect(userCount).toBe(1);
 			expect(productCount).toBe(1);
@@ -124,8 +144,12 @@ describe("Cleanup helpers", () => {
 			expect(cleanupCalled).toBe(2);
 
 			// Users should be cleaned, products should remain
-			const userCount = await connection.db.collection("users").countDocuments();
-			const productCount = await connection.db.collection("products").countDocuments();
+			const userCount = await connection.db
+				.collection("users")
+				.countDocuments();
+			const productCount = await connection.db
+				.collection("products")
+				.countDocuments();
 
 			expect(userCount).toBe(0);
 			expect(productCount).toBe(1); // Still has the product from previous test
@@ -133,14 +157,9 @@ describe("Cleanup helpers", () => {
 	});
 
 	describe("unsubscribeMocksBeforeEach", () => {
-		let connection: any;
-
 		const testHelpers = testUtils.startBeforeAll({
 			bus,
 			mockNats: true,
-			afterStart: (conn) => {
-				connection = conn;
-			},
 		});
 
 		testHelpers.unsubscribeMocksBeforeEach();
@@ -158,7 +177,7 @@ describe("Cleanup helpers", () => {
 		it("should have cleaned up mock from previous test", async () => {
 			// Create a new mock with the same subject - this should work
 			// because the previous mock was cleaned up
-			const mock = testHelpers.mockService({
+			testHelpers.mockService({
 				subject: "test-service.get-data",
 				response: { data: { value: "test2" } },
 			});
@@ -171,5 +190,28 @@ describe("Cleanup helpers", () => {
 			// Should get the new mock's response, not the old one
 			expect(response.data.value).toBe("test2");
 		});
+
+		it("should have cleaned up mock from previous test #2", async () => {
+			let gotResponse = false;
+
+			bus.request({
+				subject: "test-service.get-data",
+				message: { data: {} },
+				throwErrors: false,
+			}).then(() => {
+				gotResponse = true;
+			});
+
+			await wait();
+
+			// Should not get *any* response (timeout)
+			expect(gotResponse).toBeFalse();
+		});
 	});
 });
+
+async function wait(ms = 100) {
+	return new Promise((res) => {
+		setTimeout(res, ms);
+	});
+}
