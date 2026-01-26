@@ -336,6 +336,72 @@ testUtils.startBeforeEach({
 });
 ```
 
+### Reusing In-Memory MongoDB Across Test Suites (Performance Optimization)
+
+For even faster test execution, you can reuse a single in-memory MongoDB instance across multiple test suites using `reuseInMemoryMongo: true`. This eliminates the overhead of starting/stopping MongoDB between test suites.
+
+**Benefits:**
+- **Significantly faster tests** - No server start/stop between suites
+- **Reduced resource usage** - Single MongoDB process for all tests
+- **Same isolation** - Cleanup helpers ensure test isolation
+
+**Requirements:**
+- You **MUST** use cleanup helpers (`dropCollectionsBeforeEach()`, `dropDatabaseBeforeEach()`, or `cleanupBeforeEach()`) to ensure test isolation
+- All test suites must use the same `reuseInMemoryMongo` setting (all true or all false)
+
+```javascript
+describe("First test suite", () => {
+	const helpers = testUtils.startBeforeAll({
+		bus: bus,
+		useInMemoryMongo: true,
+		reuseInMemoryMongo: true,  // Share MongoDB across suites
+	});
+
+	// REQUIRED: Use cleanup helpers for test isolation
+	helpers.dropCollectionsBeforeEach();
+
+	it("should work with shared MongoDB", async () => {
+		// MongoDB instance is started once and reused
+	});
+});
+
+describe("Second test suite", () => {
+	const helpers = testUtils.startBeforeAll({
+		bus: bus,
+		useInMemoryMongo: true,
+		reuseInMemoryMongo: true,  // Reuses same MongoDB instance
+	});
+
+	// REQUIRED: Use cleanup helpers for test isolation
+	helpers.dropCollectionsBeforeEach();
+
+	it("should work with same MongoDB instance", async () => {
+		// Same MongoDB instance, but clean database thanks to cleanup helper
+	});
+});
+```
+
+**Manual Cleanup:**
+
+The shared MongoDB server is automatically cleaned up when your test process exits. If you need to manually stop it (e.g., in a global `afterAll` hook), use `stopSharedMemoryServer()`:
+
+```javascript
+// In your test setup file
+afterAll(async () => {
+	await testUtils.stopSharedMemoryServer();
+});
+```
+
+**When to use reuse:**
+- ✅ Multiple test suites that all use in-memory MongoDB
+- ✅ Tests run locally or in CI where speed matters
+- ✅ Using cleanup helpers for isolation
+
+**When NOT to use reuse:**
+- ❌ Tests that don't clean up properly between runs
+- ❌ Tests that need completely fresh MongoDB for each suite
+- ❌ Mixed mode (some suites with reuse, some without)
+
 ### Programmatic Usage
 
 ```javascript

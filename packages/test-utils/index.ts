@@ -71,6 +71,34 @@ export interface FrusterTestUtilsOptions {
 	 */
 	useInMemoryMongo?: boolean;
 	/**
+	 * Whether to reuse an existing in-memory MongoDB instance across test suites.
+	 * Only used when useInMemoryMongo is true.
+	 *
+	 * Benefits:
+	 * - Much faster test execution (no server start/stop between suites)
+	 * - Reduces system resource usage
+	 *
+	 * Requirements:
+	 * - You MUST use cleanup helpers (dropCollectionsBeforeEach, dropDatabaseBeforeEach,
+	 *   or cleanupBeforeEach) to ensure test isolation
+	 * - All test suites must use the same reuseInMemoryMongo setting
+	 *
+	 * Example:
+	 * ```typescript
+	 * const helpers = testUtils.startBeforeAll({
+	 *   bus,
+	 *   useInMemoryMongo: true,
+	 *   reuseInMemoryMongo: true  // Share MongoDB instance
+	 * });
+	 *
+	 * // REQUIRED: Clean up between tests for isolation
+	 * helpers.dropCollectionsBeforeEach();
+	 * ```
+	 *
+	 * Default: false (each test suite gets its own MongoDB instance)
+	 */
+	reuseInMemoryMongo?: boolean;
+	/**
 	 * Configuration for in-memory MongoDB server.
 	 * Only used when useInMemoryMongo is true.
 	 */
@@ -148,6 +176,12 @@ interface FrusterTestUtilsConnectionBuilder {
 	natsClient?: any;
 	bus?: fBus.FrusterBus;
 }
+
+// Singleton in-memory MongoDB server for reuse across test suites
+let sharedMemoryServer: {
+	server: DuckMongoMemoryServer;
+	uri: string;
+} | null = null;
 
 export function startBeforeEach(options: FrusterTestUtilsOptions) {
 	startBefore(beforeEach, afterEach, options);
@@ -416,20 +450,42 @@ async function startService(
  */
 async function startInMemoryMongo(
 	opts?: FrusterTestUtilsOptions["inMemoryMongoOptions"],
+	reuse = false,
 ): Promise<{
 	uri: string;
 	server: DuckMongoMemoryServer;
 }> {
 	try {
+		// If reuse is enabled and we have a shared server, return it
+		if (reuse && sharedMemoryServer) {
+			return {
+				uri: sharedMemoryServer.uri,
+				server: sharedMemoryServer.server,
+			};
+		}
+
 		// Dynamic import - only loads if mongodb-memory-server is installed
 		const { MongoMemoryServer } = require("mongodb-memory-server");
 
+		// Merge user options with defaults that ensure proper isolation
+		const instanceOptions = {
+			...opts?.instance,
+			// Don't specify port - let MongoDB pick a random available port
+			// This prevents port conflicts when running multiple test suites
+		};
+
 		const server = await MongoMemoryServer.create({
 			binary: opts?.binary,
-			instance: opts?.instance,
+			instance: instanceOptions,
 		});
 
 		const uri = server.getUri();
+
+		// If reuse is enabled, store as shared server
+		if (reuse) {
+			sharedMemoryServer = { server, uri };
+		}
+
 		return { uri, server };
 	} catch (error: any) {
 		if (error.code === "MODULE_NOT_FOUND") {
@@ -454,8 +510,11 @@ async function connectToMongo(
 	let memoryServer: DuckMongoMemoryServer | undefined;
 
 	if (opts.useInMemoryMongo) {
-		// Start in-memory MongoDB server
-		const result = await startInMemoryMongo(opts.inMemoryMongoOptions);
+		// Start in-memory MongoDB server (with optional reuse)
+		const result = await startInMemoryMongo(
+			opts.inMemoryMongoOptions,
+			opts.reuseInMemoryMongo,
+		);
 		mongoUri = result.uri;
 		memoryServer = result.server;
 		connection.memoryServer = memoryServer;
@@ -620,7 +679,7 @@ export async function stop(
 		}
 	}
 
-	// MongoDB cleanup
+	// MongoDB cleanup - must close client BEFORE stopping memory server
 	if (connection.client) {
 		try {
 			await connection.client?.close();
@@ -630,9 +689,24 @@ export async function stop(
 	}
 
 	// Stop in-memory MongoDB server if running
+	// IMPORTANT: Must happen after client.close() to avoid connection errors
 	if (connection.memoryServer) {
 		try {
-			await connection.memoryServer.stop();
+			// If this is a shared memory server, DON'T stop it
+			// It will be stopped manually via stopSharedMemoryServer() or when process exits
+			if (
+				sharedMemoryServer &&
+				sharedMemoryServer.server === connection.memoryServer
+			) {
+				// Shared server - keep it running for other test suites
+				// Do nothing here
+			} else {
+				// Not a shared server, stop it immediately
+				await connection.memoryServer.stop();
+				// Small delay to ensure ports are fully released
+				// This prevents "port already in use" errors when running multiple test suites
+				await new Promise((resolve) => setTimeout(resolve, 100));
+			}
 		} catch (e) {
 			console.log("Failed stopping in-memory MongoDB server", e);
 		}
@@ -645,6 +719,31 @@ export function close(
 	options?: FrusterTestUtilsOptions,
 ) {
 	return stop(connection, options);
+}
+
+/**
+ * Forcefully stop the shared in-memory MongoDB server.
+ * Only needed if using reuseInMemoryMongo and want to clean up
+ * the shared server manually (e.g., in a global afterAll hook).
+ *
+ * Example:
+ * ```typescript
+ * // In your test setup file
+ * afterAll(async () => {
+ *   await testUtils.stopSharedMemoryServer();
+ * });
+ * ```
+ */
+export async function stopSharedMemoryServer() {
+	if (sharedMemoryServer) {
+		try {
+			await sharedMemoryServer.server.stop();
+			sharedMemoryServer = null;
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		} catch (e) {
+			console.log("Failed stopping shared in-memory MongoDB server", e);
+		}
+	}
 }
 
 let allMockServices: MockService<any>[] = [];

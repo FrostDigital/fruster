@@ -165,7 +165,7 @@ describe("Cleanup helpers", () => {
 		testHelpers.unsubscribeMocksBeforeEach();
 
 		it("should create and track mock service", () => {
-			const mock = testHelpers.mockService({
+			const mock = testUtils.mockService({
 				subject: "test-service.get-data",
 				response: { data: { value: "test1" } },
 			});
@@ -177,7 +177,7 @@ describe("Cleanup helpers", () => {
 		it("should have cleaned up mock from previous test", async () => {
 			// Create a new mock with the same subject - this should work
 			// because the previous mock was cleaned up
-			testHelpers.mockService({
+			testUtils.mockService({
 				subject: "test-service.get-data",
 				response: { data: { value: "test2" } },
 			});
