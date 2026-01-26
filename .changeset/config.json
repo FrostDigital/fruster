@@ -2,7 +2,17 @@
   "$schema": "https://unpkg.com/@changesets/config@3.1.2/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [],
+  "fixed": [
+    [
+      "@fruster/bus",
+      "@fruster/decorators",
+      "@fruster/health",
+      "@fruster/log",
+      "@fruster/runner",
+      "@fruster/test-utils",
+      "@fruster/ts-transformer"
+    ]
+  ],
   "linked": [],
   "access": "public",
   "baseBranch": "main",

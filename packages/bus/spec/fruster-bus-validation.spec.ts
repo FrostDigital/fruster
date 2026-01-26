@@ -8,9 +8,9 @@ describe("Fruster bus validation", function () {
 		startNatsServerAndConnectBus(undefined, "/spec/support/test-schemas")
 			.then((connection) => {
 				natsConnection = connection;
-				done();
 			})
-			.catch(done.fail);
+			.then(() => done())
+			.catch(() => done.fail());
 	});
 
 	afterAll(() => {
@@ -46,7 +46,7 @@ describe("Fruster bus validation", function () {
 		}
 	});
 
-	it("should fail validation of request", async (done) => {
+	it("should fail validation of request", async () => {
 		const invalidCar = {
 			doors: 8,
 			brand: "audi",
@@ -57,7 +57,7 @@ describe("Fruster bus validation", function () {
 			requestSchema: "car",
 			responseSchema: "car",
 			handle: () => {
-				done.fail("should not enter subscribe");
+				fail("should not enter subscribe");
 			},
 		});
 
@@ -69,21 +69,20 @@ describe("Fruster bus validation", function () {
 					data: invalidCar,
 				},
 			});
-			done.fail();
+			fail();
 		} catch (err: any) {
 			expect(err.status).toBe(400);
-			done();
 		}
 	});
 
-	it("should fail validation of response", async (done) => {
+	it("should fail validation of response", async () => {
 		bus.clearClients();
 		await bus.closeAll();
 
 		try {
 			natsConnection = await startNatsServerAndConnectBus(undefined, "/spec/support/test-schemas");
 		} catch (err) {
-			done.fail();
+			fail();
 		}
 
 		const invalidCar = {
@@ -114,16 +113,14 @@ describe("Fruster bus validation", function () {
 				},
 			});
 
-			done.fail();
+			fail();
 		} catch (err: any) {
 			expect(err.status).toBe(500);
 			expect(err.error.code).toBe("BAD_RESPONSE");
-
-			done();
 		}
 	});
 
-	it("should fail response validation of json schemas added as pojo", async (done) => {
+	it("should fail response validation of json schemas added as pojo", async () => {
 		bus.clearClients();
 		await bus.connect({
 			address: "nats://mock",
@@ -157,16 +154,14 @@ describe("Fruster bus validation", function () {
 				},
 			});
 
-			done.fail();
+			fail();
 		} catch (err: any) {
 			expect(err.status).toBe(500, "err.status");
 			expect(err.error.code).toBe("BAD_RESPONSE", "err.error.code");
-
-			done();
 		}
 	});
 
-	it("should fail request validation of json schemas added as pojo", async (done) => {
+	it("should fail request validation of json schemas added as pojo", async () => {
 		bus.clearClients();
 		await bus.connect({
 			address: "nats://mock",
@@ -197,12 +192,10 @@ describe("Fruster bus validation", function () {
 				},
 			});
 
-			done.fail();
+			fail();
 		} catch (err: any) {
 			expect(err.status).toBe(400, "err.status");
 			expect(err.error.code).toBe("BAD_REQUEST", "err.error.code");
-
-			done();
 		}
 	});
 });

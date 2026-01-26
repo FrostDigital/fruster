@@ -36,7 +36,7 @@ describe("Fruster bus in mocked mode", () => {
 			});
 		});
 
-		it("should reject if request has error status code", async (done) => {
+		it("should reject if request has error status code", async () => {
 			bus.subscribe(subject, (req, replyTo) => {
 				bus.publish({
 					subject: replyTo,
@@ -46,12 +46,7 @@ describe("Fruster bus in mocked mode", () => {
 				});
 			});
 
-			try {
-				await bus.request({ subject, message: { reqId: "hello" } });
-				done.fail("Fail if we got this far");
-			} catch (err: any) {
-				done();
-			}
+			await expectAsync(bus.request({ subject, message: { reqId: "hello" } })).toBeRejected();
 		});
 
 		it("should set custom reply-to subject for request", (done) => {
@@ -63,7 +58,7 @@ describe("Fruster bus in mocked mode", () => {
 			bus.request({ subject, message: { reqId: "hello" } });
 		});
 
-		it("should reject if message has non empty error object", async (done) => {
+		it("should reject if message has non empty error object", async () => {
 			bus.subscribe(subject, (req, replyTo) => {
 				bus.publish({
 					subject: replyTo,
@@ -75,12 +70,7 @@ describe("Fruster bus in mocked mode", () => {
 				});
 			});
 
-			try {
-				await bus.request({ subject, message: { reqId: "hello" } });
-				done.fail("Fail if we got this far");
-			} catch (err: any) {
-				done();
-			}
+			await expectAsync(bus.request({ subject, message: { reqId: "hello" } })).toBeRejected();
 		});
 
 		it("should NOT reject if message has EMPTY error object", async () => {
@@ -96,7 +86,7 @@ describe("Fruster bus in mocked mode", () => {
 			await bus.request({ subject, message: { reqId: "hello" } });
 		});
 
-		it("should reject if error is thrown in returned promise", async (done) => {
+		it("should reject if error is thrown in returned promise", async () => {
 			bus.subscribe(subject, (req, replyTo) => {
 				return new Promise(function () {
 					throw {
@@ -109,14 +99,13 @@ describe("Fruster bus in mocked mode", () => {
 
 			try {
 				await bus.request({ subject, message: { reqId: "hello" } });
-				done.fail("Fail if we got this far");
+				fail("Fail if we got this far");
 			} catch (err: any) {
 				expect(err.error.id).toBe("abc123");
-				done();
 			}
 		});
 
-		it("should reject if rejection in returned promise", async (done) => {
+		it("should reject if rejection in returned promise", async () => {
 			bus.subscribe(subject, (req, replyTo) => {
 				return Promise.reject({
 					error: {
@@ -127,14 +116,13 @@ describe("Fruster bus in mocked mode", () => {
 
 			try {
 				await bus.request({ subject, message: { reqId: "hello" } });
-				done.fail("Fail if we got this far");
+				fail("Fail if we got this far");
 			} catch (err: any) {
 				expect(err.error.id).toBe("abc123");
-				done();
 			}
 		});
 
-		it("should reject if error is thrown in callback", async (done) => {
+		it("should reject if error is thrown in callback", async () => {
 			bus.subscribe(subject, (req, replyTo) => {
 				throw {
 					error: {
@@ -145,14 +133,13 @@ describe("Fruster bus in mocked mode", () => {
 
 			try {
 				await bus.request({ subject, message: { reqId: "hello" } });
-				done.fail("Fail if we got this far");
+				fail("Fail if we got this far");
 			} catch (err: any) {
 				expect(err.error.id).toBe("abc123");
-				done();
 			}
 		});
 
-		it("should reject if error is resolved from promise", async (done) => {
+		it("should reject if error is resolved from promise", async () => {
 			bus.subscribe(subject, (req, replyTo) => {
 				return Promise.resolve({
 					error: {
@@ -163,26 +150,20 @@ describe("Fruster bus in mocked mode", () => {
 
 			try {
 				await bus.request({ subject, message: { reqId: "hello" } });
-				done.fail("Fail if we got this far");
+				fail("Fail if we got this far");
 			} catch (err: any) {
 				expect(err.error.id).toBe("abc123");
-				done();
 			}
 		});
 
-		it("should timeout response", async (done) => {
+		it("should timeout response", async () => {
 			bus.subscribe(subject, (req, replyTo) => {
 				setTimeout(function () {
 					bus.publish({ subject: replyTo, message: {} });
 				}, 2);
 			});
 
-			try {
-				await bus.request({ subject, message: { reqId: "hello" }, timeout: 1 });
-				done.fail("Fail if we got this far");
-			} catch (err: any) {
-				done();
-			}
+			await expectAsync(bus.request({ subject, message: { reqId: "hello" }, timeout: 1 })).toBeRejected();
 		});
 
 		it("should not timeout response if response sent within max time", async () => {

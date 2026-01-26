@@ -260,22 +260,43 @@ pnpm changeset
 # 2. Enter pre-release mode
 pnpm changeset pre enter alpha
 # This puts the monorepo in pre-release mode
+# The pre-release identifier (alpha/beta/rc) becomes the npm dist-tag
 
 # 3. Version packages
 pnpm run version-packages
 # Versions will be like: 1.3.0-alpha.0
 
-# 4. Publish with pre-release tag
-pnpm run release --tag next
-# Users install with: pnpm add @fruster/bus@next
+# 4. Commit version changes
+git add .
+git commit -m "chore: version packages (alpha)"
+git push
 
-# 5. Exit pre-release mode when ready for stable release
+# 5. Build and publish packages
+pnpm run build
+pnpm publish -r --tag alpha --no-git-checks
+# IMPORTANT: Use 'pnpm publish -r' instead of 'changeset publish'
+# This ensures workspace:* dependencies are converted to actual versions
+# Users install with: pnpm add @fruster/bus@alpha
+
+# 6. For subsequent alpha releases, create new changesets and repeat steps 3-5
+# Versions will increment automatically (alpha.1, alpha.2, etc.)
+
+# 7. Exit pre-release mode when ready for stable release
 pnpm changeset pre exit
 pnpm run version-packages  # Creates stable versions
-pnpm run release          # Publishes as latest
+git add .
+git commit -m "chore: version packages"
+git push
+pnpm run build
+pnpm publish -r --no-git-checks  # Publishes as latest
 ```
 
 **Common pre-release identifiers:** `alpha`, `beta`, `rc` (release candidate)
+
+**Important Notes:**
+- When in pre-release mode, Changesets automatically uses the pre-release identifier as the npm dist-tag
+- Always use `pnpm publish -r` instead of `changeset publish` to ensure proper workspace protocol conversion
+- The `--no-git-checks` flag allows publishing without git tags (useful for alpha releases)
 
 All packages have `"publishConfig": { "access": "public" }` for npm registry.
 

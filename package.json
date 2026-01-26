@@ -23,8 +23,9 @@
     "@types/node": "^20.12.12",
     "rimraf": "^6.1.2",
     "ts-node": "^10.9.2",
-    "typescript": "5.4.5"
+    "typescript": "^5.9.0"
   },
+  "comment": "TypeScript version is centralized in root - all packages use this version via hoisting",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/FrostDigital/fruster.git"

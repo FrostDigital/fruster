@@ -31,25 +31,34 @@ export default function frusterTransformerPlugin(
 
   return (ctx: ts.TransformationContext) => {
     return (sourceFile: ts.SourceFile) => {
-      if (!minimatch(sourceFile.fileName, options?.handlerPath || "**/*.ts")) {
+      const pattern = options?.handlerPath || "**/*.ts";
+      const matches = minimatch(sourceFile.fileName, pattern);
+      if (!matches) {
         return sourceFile;
       }
 
       debugLog("Analyzing " + sourceFile.fileName);
 
-      function visitHandlerSourceFile(node: ts.Node) {
-        if (ts.isClassDeclaration(node) && hasSubscribeDecorator(node)) {
-          debugLog(
-            `Found class with @subscribe in file ${
-              node.getSourceFile().fileName
-            }`
-          );
-          return parseHandler(node, program, checker, ctx);
+      // Manually visit class declarations to check for @subscribe decorators
+      let hasTransformedClasses = false;
+      const transformedStatements: ts.Statement[] = [];
+
+      for (const statement of sourceFile.statements) {
+        if (ts.isClassDeclaration(statement) && hasSubscribeDecorator(statement)) {
+          debugLog(`Found class with @subscribe in file ${sourceFile.fileName}`);
+          const transformedClass = parseHandler(statement, program, checker, ctx);
+          transformedStatements.push(transformedClass as ts.Statement);
+          hasTransformedClasses = true;
+        } else {
+          transformedStatements.push(statement);
         }
-        return node;
       }
 
-      return ts.visitEachChild(sourceFile, visitHandlerSourceFile, ctx);
+      if (!hasTransformedClasses) {
+        return sourceFile;
+      }
+
+      return ts.factory.updateSourceFile(sourceFile, transformedStatements);
     };
   };
 }
@@ -343,16 +352,17 @@ function parseHandler(
         resSchema = getSchemaForType(program, checker, resTypeNode);
       }
 
+      // Use ts.visitEachChild with a targeted visitor for decorator nodes
+      // This works because decorators are in the AST, just not in modifiers array
       return ts.visitEachChild(
         methodOrPropertyDeclaration,
-        (node) =>
-          visitSubscribeMethodOrPropertyDeclaration(
-            node,
-            reqSchema,
-            resSchema,
-            paramsDoc,
-            queryDoc
-          ),
+        (node) => visitSubscribeMethodOrPropertyDeclaration(
+          node,
+          reqSchema,
+          resSchema,
+          paramsDoc,
+          queryDoc
+        ),
         ctx
       );
     }
@@ -360,7 +370,22 @@ function parseHandler(
     return node;
   }
 
-  return ts.visitEachChild(classDeclaration, visitClassDeclaration, ctx);
+  // Manually iterate class members instead of using ts.visitEachChild
+  // ts.visitEachChild doesn't work properly in TS 5.9
+  const transformedMembers: ts.ClassElement[] = [];
+  for (const member of classDeclaration.members) {
+    const transformedMember = visitClassDeclaration(member);
+    transformedMembers.push(transformedMember as ts.ClassElement);
+  }
+
+  return ts.factory.updateClassDeclaration(
+    classDeclaration,
+    classDeclaration.modifiers,
+    classDeclaration.name,
+    classDeclaration.typeParameters,
+    classDeclaration.heritageClauses,
+    transformedMembers
+  );
 }
 
 /**
@@ -371,21 +396,93 @@ function parseHandler(
  * @returns
  */
 function hasSubscribeDecorator(node: ts.Node) {
+  // TypeScript 5.0+ provides ts.getDecorators() - try that first
+  if (ts.isClassDeclaration(node)) {
+    for (const member of node.members) {
+      if (ts.isMethodDeclaration(member) || ts.isPropertyDeclaration(member)) {
+        // Use ts.getDecorators if available (TS 5.0+)
+        const decorators = (ts as any).getDecorators?.(member);
+        if (decorators && decorators.length > 0) {
+          for (const decorator of decorators) {
+            try {
+              const text = (decorator as any).expression?.getText?.() || (decorator as any).getText?.() || "";
+              if (text.indexOf("subscribe") >= 0) {
+                return true;
+              }
+            } catch (e) {
+              // Continue
+            }
+          }
+        }
+
+        // Fallback to modifiers for TS 5.0+
+        const modifiers = ts.getModifiers(member);
+        if (modifiers) {
+          for (const modifier of modifiers) {
+            if (ts.isDecorator(modifier)) {
+              try {
+                const text = (modifier as any).expression?.getText?.() || (modifier as any).getText?.() || "";
+                if (text.indexOf("subscribe") >= 0) {
+                  return true;
+                }
+              } catch (e) {
+                // Continue
+              }
+            }
+          }
+        }
+
+        // Fallback to old decorators property
+        const oldDecorators = (member as any).decorators;
+        if (oldDecorators) {
+          for (const decorator of oldDecorators) {
+            try {
+              const text = (decorator as any).expression?.getText?.() || (decorator as any).getText?.() || "";
+              if (text.indexOf("subscribe") >= 0) {
+                return true;
+              }
+            } catch (e) {
+              // Continue
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Final fallback: recursive search
   const decorator = findFirstNestedChildOfKind(
     node,
     ts.SyntaxKind.Decorator,
-    (candidate) => candidate.getText().indexOf("@subscribe") === 0
+    (candidate) => {
+      try {
+        const text = (candidate as any).getText?.() || "";
+        return text.indexOf("subscribe") >= 0;
+      } catch (e) {
+        return false;
+      }
+    }
   );
 
   return !!decorator;
 }
 
 function getSubscribeDecorator(node: ts.Node) {
-  return findFirstNestedChildOfKind(
+  // Use the same approach as hasSubscribeDecorator - find decorator in AST
+  const decorator = findFirstNestedChildOfKind(
     node,
     ts.SyntaxKind.Decorator,
-    (candidate) => candidate.getText().indexOf("@subscribe") === 0
+    (candidate) => {
+      try {
+        const text = (candidate as any).getText?.() || "";
+        return text.indexOf("subscribe") >= 0;
+      } catch (e) {
+        return false;
+      }
+    }
   );
+
+  return decorator as ts.Decorator | undefined;
 }
 
 let generator: TJS.JsonSchemaGenerator | null = null;

@@ -58,19 +58,14 @@ describe("Fruster bus", () => {
 			bus.publish({ subject, message: {} });
 		});
 
-		it("should reject if request has error status code", async (done) => {
+		it("should reject if request has error status code", async () => {
 			bus.subscribe(subject, () => {
 				return {
 					status: 400,
 				};
 			});
 
-			try {
-				await bus.request({ subject, message: { reqId: "hello" } });
-				done.fail();
-			} catch (err: any) {
-				done();
-			}
+			await expectAsync(bus.request({ subject, message: { reqId: "hello" } })).toBeRejected();
 		});
 
 		it("should set error id automatically", async () => {
@@ -102,7 +97,7 @@ describe("Fruster bus", () => {
 			}
 		});
 
-		it("should set thrower for error", async (done) => {
+		it("should set thrower for error", async () => {
 			/** Two-step subscribe */
 			bus.subscribe(subject, (req, replyTo) => bus.request({ subject: subject + "helloooo", message: req }));
 			bus.subscribe(subject + "helloooo", (req) => {
@@ -118,11 +113,9 @@ describe("Fruster bus", () => {
 
 			try {
 				await bus.request({ subject, message: { reqId: "hello" } });
-				done.fail();
+				fail();
 			} catch (err: any) {
 				expect(err.error.thrower).toBe("fake-service");
-
-				done();
 			}
 		});
 
@@ -135,7 +128,7 @@ describe("Fruster bus", () => {
 			bus.request({ subject, message: { reqId: "hello" } });
 		});
 
-		it("should reject if message has non empty error object", async (done) => {
+		it("should reject if message has non empty error object", async () => {
 			bus.subscribe(subject, (req, replyTo) => {
 				bus.publish({
 					subject: replyTo,
@@ -147,12 +140,7 @@ describe("Fruster bus", () => {
 				});
 			});
 
-			try {
-				await bus.request({ subject, message: { reqId: "hello" } });
-				done.fail();
-			} catch (err: any) {
-				done();
-			}
+			await expectAsync(bus.request({ subject, message: { reqId: "hello" } })).toBeRejected();
 		});
 
 		it("should NOT reject if message has EMPTY error object", (done) => {
@@ -166,11 +154,11 @@ describe("Fruster bus", () => {
 			});
 
 			bus.request({ subject, message: { reqId: "hello" } })
-				.then(done)
-				.catch(done.fail);
+				.then(() => done())
+				.catch(() => done.fail());
 		});
 
-		it("should reject if error is thrown in returned promise", async (done) => {
+		it("should reject if error is thrown in returned promise", async () => {
 			bus.subscribe(subject, (req, replyTo) => {
 				return new Promise(() => {
 					throw {
@@ -183,14 +171,13 @@ describe("Fruster bus", () => {
 
 			try {
 				await bus.request({ subject, message: { reqId: "hello" } });
-				done.fail();
+				fail();
 			} catch (err: any) {
 				expect(err.error.id).toBe("abc123");
-				done();
 			}
 		});
 
-		it("should reject if rejection in returned promise", async (done) => {
+		it("should reject if rejection in returned promise", async () => {
 			bus.subscribe(subject, (req, replyTo) => {
 				return Promise.reject({
 					error: {
@@ -201,10 +188,9 @@ describe("Fruster bus", () => {
 
 			try {
 				await bus.request({ subject, message: { reqId: "hello" } });
-				done.fail();
+				fail();
 			} catch (err: any) {
 				expect(err.error.id).toBe("abc123");
-				done();
 			}
 		});
 
@@ -218,11 +204,12 @@ describe("Fruster bus", () => {
 			});
 
 			bus.request({ subject, message: { reqId: "hello" } })
-				.then(() => done.fail)
+				.then(() => done.fail())
 				.catch((err) => {
 					expect(err.error.id).toBe("abc123");
-					done();
-				});
+				})
+				.then(() => done())
+				.catch(() => done.fail());
 		});
 
 		it("should reject if error is resolved from promise", (done) => {
@@ -237,11 +224,12 @@ describe("Fruster bus", () => {
 			});
 
 			bus.request({ subject, message: { reqId: "hello" } })
-				.then(() => done.fail)
+				.then(() => done.fail())
 				.catch((err) => {
 					expect(err.error.id).toBe("abc123");
-					done();
-				});
+				})
+				.then(() => done())
+				.catch(() => done.fail());
 		});
 
 		it("should timeout response", (done) => {
@@ -252,8 +240,8 @@ describe("Fruster bus", () => {
 			});
 
 			bus.request({ subject, message: { reqId: "hello" }, timeout: 1 })
-				.then(() => done.fail)
-				.catch(done);
+				.then(() => done.fail())
+				.catch(() => done());
 		});
 
 		it("should NOT timeout response", (done) => {
@@ -264,8 +252,8 @@ describe("Fruster bus", () => {
 			});
 
 			bus.request({ subject, message: { reqId: "hello" }, timeout: 100 })
-				.then(done)
-				.catch(done.fail);
+				.then(() => done())
+				.catch(() => done.fail());
 		});
 
 		it("should send and receive multiple requests", (done) => {
@@ -276,12 +264,12 @@ describe("Fruster bus", () => {
 			let firstReq = bus
 				.request({ subject, message: { reqId: "hello" } })
 				.then(sendNext)
-				.catch(done.fail);
+				.catch(() => done.fail());
 
 			function sendNext() {
 				bus.request({ subject, message: { reqId: "hello" } })
-					.then(done)
-					.catch(done.fail);
+					.then(() => done())
+					.catch(() => done.fail());
 			}
 		});
 
@@ -291,8 +279,8 @@ describe("Fruster bus", () => {
 			});
 
 			bus.request({ subject, message: { reqId: "hello" } })
-				.then(done)
-				.catch(done.fail);
+				.then(() => done())
+				.catch(() => done.fail());
 		});
 
 		it("should send response if returned as a promise from subscribe callback", (done) => {
@@ -312,7 +300,7 @@ describe("Fruster bus", () => {
 					expect(msg.reqId).toBe("reqId");
 					done();
 				})
-				.catch(done.fail);
+				.catch(() => done.fail());
 		});
 
 		it("should generate transaction id, request id and set from for request and pass it on in response", (done) => {
@@ -386,7 +374,7 @@ describe("Fruster bus", () => {
 			});
 		});
 
-		it("should set how many milliseconds it took to respond to request", async (done) => {
+		it("should set how many milliseconds it took to respond to request", async () => {
 			const subject = "ms.test";
 			const fakeDelayMs = 100;
 
@@ -400,34 +388,28 @@ describe("Fruster bus", () => {
 			const resp = await bus.request({ subject, message: { reqId: "reqId" } });
 
 			expect(resp.ms).toBeGreaterThan(fakeDelayMs - 1);
-
-			done();
 		});
 	});
 
 	describe("Permissions", () => {
-		it("should allow anything with no permissions defined", async (done) => {
+		it("should allow anything with no permissions defined", (done) => {
 			bus.subscribe(subject, (req) => {
 				expect(req.user?.scopes).toEqual(["user.get"]);
 				done();
 			});
 
-			try {
-				await bus.publish({
-					subject,
-					message: {
-						user: {
-							id: "foo",
-							scopes: ["user.get"],
-						},
+			bus.publish({
+				subject,
+				message: {
+					user: {
+						id: "foo",
+						scopes: ["user.get"],
 					},
-				});
-			} catch (err: any) {
-				done.fail();
-			}
+				},
+			});
 		});
 
-		it("should not allow users with incorrect permissions to make call", async (done) => {
+		it("should not allow users with incorrect permissions to make call", async () => {
 			bus.subscribe({
 				subject,
 				responseSchema: "",
@@ -453,10 +435,9 @@ describe("Fruster bus", () => {
 						},
 					},
 				});
-				done.fail("Should have thrown 403 error");
+				fail("Should have thrown 403 error");
 			} catch (err: any) {
 				expect(err.status).toBe(403);
-				done();
 			}
 		});
 
@@ -600,24 +581,22 @@ describe("Fruster bus", () => {
 			expect(resp.status).toBe(200);
 		});
 
-		it("should add params w/ values to req object", async (done) => {
+		it("should add params w/ values to req object", (done) => {
 			bus.subscribe("ws.post.org.:userId.school.:schoolId", (req) => {
 				expect(req.params.userId).toBe("BobId");
 				expect(req.params.schoolId).toBe("SkolanId");
 				done();
 			});
 
-			try {
-				await bus.request({
-					subject: "ws.post.org.BobId.school.SkolanId",
-					message: {
-						reqId: "hello",
-					},
-				});
-			} catch (err: any) {
+			bus.request({
+				subject: "ws.post.org.BobId.school.SkolanId",
+				message: {
+					reqId: "hello",
+				},
+			}).catch((err: any) => {
 				console.error(err);
 				done.fail();
-			}
+			});
 		});
 
 		it("should be possible to send params w/ request", async () => {
@@ -651,7 +630,7 @@ describe("Fruster bus", () => {
 			conf.compressionStrategy = constants.COMPRESSION_STRATEGY_MANUAL;
 		});
 
-		it("should decompress data in incoming request", async (done) => {
+		it("should decompress data in incoming request", (done) => {
 			const data = {
 				foo: "bar",
 			};
@@ -667,7 +646,7 @@ describe("Fruster bus", () => {
 				data,
 			};
 
-			await bus.request({ subject, message: req });
+			bus.request({ subject, message: req });
 		});
 
 		it("should decompress response to a request", async () => {
@@ -706,7 +685,7 @@ describe("Fruster bus", () => {
 			bus.request({ subject, message: req });
 		});
 
-		it("should fail to decompress in subscribe if using unrecognized dataEncoding", async (done) => {
+		it("should fail to decompress in subscribe if using unrecognized dataEncoding", async () => {
 			const data = {
 				foo: "bar",
 			};
@@ -725,11 +704,10 @@ describe("Fruster bus", () => {
 				expect(err.status).toBe(400);
 				expect(err.reqId).toBe("reqId");
 				expect(err.error.code).toMatch("INVALID_DATA_ENCODING");
-				done();
 			}
 		});
 
-		it("should fail to decompress in requests response if using unrecognized dataEncoding", async (done) => {
+		it("should fail to decompress in requests response if using unrecognized dataEncoding", async () => {
 			bus.subscribe(subject, (req) => {
 				return {
 					status: 200,
@@ -749,11 +727,10 @@ describe("Fruster bus", () => {
 				expect(err.status).toBe(400);
 				expect(err.reqId).toBe("reqId");
 				expect(err.error.code).toMatch("INVALID_DATA_ENCODING");
-				done();
 			}
 		});
 
-		it("should compress data in request if larger than threshold value and compression strategy is auto", async (done) => {
+		it("should compress data in request if larger than threshold value and compression strategy is auto", (done) => {
 			const data = require("./support/1mb");
 
 			bus.subscribe(subject, (req) => {
@@ -762,10 +739,10 @@ describe("Fruster bus", () => {
 				done();
 			});
 
-			await bus.request({ subject, message: { reqId: "reqId", data } });
+			bus.request({ subject, message: { reqId: "reqId", data } });
 		});
 
-		it("should compress data in response if larger than threshold value and compression strategy is auto", async (done) => {
+		it("should compress data in response if larger than threshold value and compression strategy is auto", async () => {
 			bus.subscribe(subject, (req) => {
 				return {
 					status: 200,
@@ -777,8 +754,6 @@ describe("Fruster bus", () => {
 
 			expect(resp.dataEncoding).toBe(constants.CONTENT_ENCODING_GZIP);
 			expect(resp.data.foo).toBeDefined("data should have been decompressed");
-
-			done();
 		});
 	});
 });

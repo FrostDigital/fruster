@@ -31,9 +31,8 @@
     "@fruster/test-utils": "workspace:*",
     "@types/jasmine": "^3.10.3",
     "jasmine": "^4.0.2",
-    "jasmine-spec-reporter": "^7.0.0"
-  },
-  "peerDependencies": {
-    "typescript": ">=5.4.5"
+    "jasmine-spec-reporter": "^7.0.0",
+    "mongodb": "^7.0.0",
+    "mongodb-memory-server": "^11.0.1"
   }
 }

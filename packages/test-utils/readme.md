@@ -2,9 +2,56 @@
 
 Utils for jasmine tests.
 
+## NATS Server Support (Optional)
+
+The test-utils package uses the NATS server for testing, but does not include NATS as a dependency. If you need NATS support in your tests:
+
+### Installation
+
+Install NATS server from [the official installation guide](https://docs.nats.io/running-a-nats-service/introduction/installation):
+
+**macOS:**
+```bash
+brew install nats-server
+```
+
+**Linux:**
+```bash
+curl -L https://github.com/nats-io/nats-server/releases/download/v2.10.7/nats-server-v2.10.7-linux-amd64.zip -o nats-server.zip
+unzip nats-server.zip -d nats-server
+sudo cp nats-server/nats-server-v2.10.7-linux-amd64/nats-server /usr/local/bin
+```
+
+**Windows:**
+```bash
+choco install nats-server
+```
+
+### Error Handling
+
+If you use test utilities that require NATS without installing the NATS server, you'll receive a helpful error message:
+
+```
+NATS server is not installed or not in PATH.
+Install it from https://docs.nats.io/running-a-nats-service/introduction/installation
+or use mockNats: true option for in-memory testing.
+```
+
+### Using Mock NATS
+
+For tests that don't require a real NATS server, you can use the in-memory mock:
+
+```javascript
+testUtils.startBeforeEach({
+	service: service,
+	bus: bus,
+	mockNats: true  // Use in-memory NATS instead of real server
+});
+```
+
 ## Start and stop a service beforeEach/beforeAll
 
-Convenient method to start nats, connect bus, start mongo db and a service before each or all tests.
+Convenient method to start nats, connect bus, optionally connect to MongoDB, and start a service before each or all tests.
 
 ```javascript
 describe("Foo spec", () => {
@@ -28,7 +75,7 @@ describe("Foo spec", () => {
 		service: service,
 		bus: bus,
 		afterStart: (connection) => {
-			repo = new Repo(connection.db);
+			// do something after service has started
 			return Promise.resolve();
 		},
 		beforeStop: (connection) => {
@@ -39,6 +86,415 @@ describe("Foo spec", () => {
 
 });
 ```
+
+## Database Cleanup Between Tests
+
+When using `startBeforeAll()` to start your service once for the entire test suite, you can use cleanup helpers to clean the database between tests without restarting the service. This provides better test isolation while maintaining fast test execution.
+
+### Drop Collections Between Tests
+
+The recommended approach for cleaning between tests. Drops all collections but preserves indexes:
+
+```javascript
+describe("Foo spec", () => {
+	const testHelpers = testUtils.startBeforeAll({
+		service: service,
+		bus: bus,
+		useInMemoryMongo: true
+	});
+
+	// Clean database between tests
+	testHelpers.dropCollectionsBeforeEach();
+
+	it("test 1", async () => {
+		// Database is clean
+		await connection.db.collection("users").insertOne({ name: "Alice" });
+	});
+
+	it("test 2", async () => {
+		// Database is clean again
+		const count = await connection.db.collection("users").countDocuments();
+		expect(count).toBe(0);
+	});
+});
+```
+
+### Drop Database Between Tests
+
+Drops the entire database between tests (slower than dropping collections):
+
+```javascript
+describe("Foo spec", () => {
+	const testHelpers = testUtils.startBeforeAll({
+		service: service,
+		bus: bus,
+		useInMemoryMongo: true
+	});
+
+	testHelpers.dropDatabaseBeforeEach();
+
+	// Your tests...
+});
+```
+
+### Custom Cleanup Logic
+
+For more control, use custom cleanup logic:
+
+```javascript
+describe("Foo spec", () => {
+	const testHelpers = testUtils.startBeforeAll({
+		service: service,
+		bus: bus,
+		useInMemoryMongo: true
+	});
+
+	// Only clean specific collections
+	testHelpers.cleanupBeforeEach(async (connection) => {
+		await connection.db?.collection("users").deleteMany({});
+		await connection.db?.collection("orders").deleteMany({});
+	});
+
+	// Your tests...
+});
+```
+
+**Important Safety Note:** `dropDatabaseBeforeEach()` and `dropCollectionsBeforeEach()` only work with in-memory MongoDB (`useInMemoryMongo: true`) to prevent accidentally dropping real databases. For external databases, use `cleanupBeforeEach()` with custom logic.
+
+### Clean Up Mock Subscriptions
+
+When using `startBeforeAll()`, mock services created with `mockService()` persist across tests. Use the cleanup helper to automatically unsubscribe mocks between tests:
+
+```javascript
+describe("Foo spec", () => {
+	const testHelpers = testUtils.startBeforeAll({
+		service: service,
+		bus: bus,
+		mockNats: true
+	});
+
+	// Automatically unsubscribe all mocks before each test
+	testHelpers.unsubscribeMocksBeforeEach();
+
+	it("test 1", () => {
+		const mock = testHelpers.mockService({
+			subject: "user-service.get-user",
+			response: { data: { id: 1, name: "John" } }
+		});
+		// Mock is automatically tracked and cleaned up
+	});
+
+	it("test 2", () => {
+		// Previous mock is gone, can create new mock with same subject
+		const mock = testHelpers.mockService({
+			subject: "user-service.get-user",
+			response: { data: { id: 2, name: "Jane" } }
+		});
+	});
+});
+```
+
+**Note:** Use `testHelpers.mockService()` instead of `testUtils.mockService()` to enable automatic cleanup tracking.
+
+## MongoDB Support (Optional)
+
+The test-utils package supports MongoDB connections, but does not include MongoDB as a dependency. If you need MongoDB support in your tests:
+
+### Installation
+
+If your application already uses MongoDB in production, the `mongodb` package is likely already installed as a regular dependency and no additional installation is needed.
+
+If you only need MongoDB for testing (and your application doesn't use it in production), install it as a dev dependency:
+```bash
+pnpm add -D mongodb
+```
+
+If your application uses MongoDB in production:
+```bash
+pnpm add mongodb
+```
+
+### Usage
+
+Use MongoDB in your tests by providing a `mongoUrl`:
+
+```javascript
+describe("Foo spec", () => {
+	testUtils.startBeforeEach({
+		service: service,
+		bus: bus,
+		mongoUrl: "mongodb://localhost:27017/test-db",
+		afterStart: (connection) => {
+			// Access MongoDB database
+			const users = connection.db.collection("users");
+			return users.insertOne({ name: "test" });
+		},
+	});
+
+	it("should work with MongoDB", async () => {
+		// Your test code here
+	});
+});
+```
+
+### Access MongoDB Connection
+
+```javascript
+const connection = await testUtils.start({
+	bus: bus,
+	mongoUrl: "mongodb://localhost:27017/test-db"
+});
+
+// connection.db is the MongoDB Db instance
+// connection.client is the MongoClient instance
+await connection.db.collection("users").insertOne({ name: "John" });
+
+await testUtils.close(connection);
+```
+
+### Clean Database Between Tests
+
+For cleaning database state between tests, use the cleanup helpers instead of restarting the entire service. See the "Database Cleanup Between Tests" section above for details.
+
+### Error Handling
+
+If you use `mongoUrl` without installing the mongodb package, you'll receive a helpful error message:
+
+```
+MongoDB support requires the "mongodb" package to be installed.
+Install it with: pnpm add mongodb (or pnpm add -D mongodb for test-only usage)
+```
+
+### Version Compatibility
+
+This dynamic loading approach works with all MongoDB driver versions (3.x, 4.x, 5.x, 6.x) since the core API (`connect()`, `db()`, `close()`, `dropDatabase()`) has remained stable.
+
+## In-Memory MongoDB Support (Optional)
+
+For faster and more isolated tests, you can use in-memory MongoDB instead of connecting to an external MongoDB instance. This eliminates the need for a running MongoDB server during tests.
+
+### Installation
+
+Install both `mongodb` and `mongodb-memory-server` as dev dependencies:
+
+```bash
+pnpm add -D mongodb mongodb-memory-server
+```
+
+**Note:** The first time you use mongodb-memory-server, it will download a MongoDB binary (~70-100MB). This download is cached, so subsequent test runs will be fast.
+
+### Basic Usage
+
+Enable in-memory MongoDB with the `useInMemoryMongo` option:
+
+```javascript
+describe("Foo spec", () => {
+	const testHelpers = testUtils.startBeforeAll({
+		service: service,
+		bus: bus,
+		useInMemoryMongo: true,  // Start in-memory MongoDB
+	});
+
+	// Clean database between tests
+	testHelpers.dropCollectionsBeforeEach();
+
+	it("should work with in-memory MongoDB", async () => {
+		// Your test code here
+	});
+});
+```
+
+### Comparison: External vs In-Memory MongoDB
+
+| Feature | External MongoDB (`mongoUrl`) | In-Memory MongoDB (`useInMemoryMongo`) |
+|---------|------------------------------|---------------------------------------|
+| **Setup** | Requires running MongoDB server | No external server needed |
+| **Speed** | Network overhead | Faster (in-process) |
+| **Isolation** | Shared server (potential conflicts) | Completely isolated per test run |
+| **Cleanup** | Must manually clean data | Automatic cleanup on stop |
+| **Best for** | Integration tests, debugging | Unit tests, CI/CD pipelines |
+
+### Advanced Configuration
+
+Customize the in-memory MongoDB server with `inMemoryMongoOptions`:
+
+```javascript
+testUtils.startBeforeEach({
+	service: service,
+	bus: bus,
+	useInMemoryMongo: true,
+	inMemoryMongoOptions: {
+		binary: {
+			version: "7.0.0",  // Specific MongoDB version
+		},
+		instance: {
+			port: 27017,        // Custom port (optional)
+			dbName: "test-db",  // Custom database name
+			storageEngine: "ephemeralForTest",  // Fastest for testing
+		},
+	},
+});
+```
+
+### Reusing In-Memory MongoDB Across Test Suites (Performance Optimization)
+
+For even faster test execution, you can reuse a single in-memory MongoDB instance across multiple test suites using `reuseInMemoryMongo: true`. This eliminates the overhead of starting/stopping MongoDB between test suites.
+
+**Benefits:**
+- **Significantly faster tests** - No server start/stop between suites
+- **Reduced resource usage** - Single MongoDB process for all tests
+- **Same isolation** - Cleanup helpers ensure test isolation
+
+**Requirements:**
+- You **MUST** use cleanup helpers (`dropCollectionsBeforeEach()`, `dropDatabaseBeforeEach()`, or `cleanupBeforeEach()`) to ensure test isolation
+- All test suites must use the same `reuseInMemoryMongo` setting (all true or all false)
+
+```javascript
+describe("First test suite", () => {
+	const helpers = testUtils.startBeforeAll({
+		bus: bus,
+		useInMemoryMongo: true,
+		reuseInMemoryMongo: true,  // Share MongoDB across suites
+	});
+
+	// REQUIRED: Use cleanup helpers for test isolation
+	helpers.dropCollectionsBeforeEach();
+
+	it("should work with shared MongoDB", async () => {
+		// MongoDB instance is started once and reused
+	});
+});
+
+describe("Second test suite", () => {
+	const helpers = testUtils.startBeforeAll({
+		bus: bus,
+		useInMemoryMongo: true,
+		reuseInMemoryMongo: true,  // Reuses same MongoDB instance
+	});
+
+	// REQUIRED: Use cleanup helpers for test isolation
+	helpers.dropCollectionsBeforeEach();
+
+	it("should work with same MongoDB instance", async () => {
+		// Same MongoDB instance, but clean database thanks to cleanup helper
+	});
+});
+```
+
+**Manual Cleanup:**
+
+The shared MongoDB server is automatically cleaned up when your test process exits. If you need to manually stop it (e.g., in a global `afterAll` hook), use `stopSharedMemoryServer()`:
+
+```javascript
+// In your test setup file
+afterAll(async () => {
+	await testUtils.stopSharedMemoryServer();
+});
+```
+
+**When to use reuse:**
+- ✅ Multiple test suites that all use in-memory MongoDB
+- ✅ Tests run locally or in CI where speed matters
+- ✅ Using cleanup helpers for isolation
+
+**When NOT to use reuse:**
+- ❌ Tests that don't clean up properly between runs
+- ❌ Tests that need completely fresh MongoDB for each suite
+- ❌ Mixed mode (some suites with reuse, some without)
+
+### Programmatic Usage
+
+```javascript
+const connection = await testUtils.start({
+	bus: bus,
+	useInMemoryMongo: true,
+});
+
+// connection.db is the MongoDB Db instance
+// connection.client is the MongoClient instance
+// connection.memoryServer is the MongoMemoryServer instance
+await connection.db.collection("users").insertOne({ name: "John" });
+
+await testUtils.close(connection);  // Automatically stops the memory server
+```
+
+### Behavior Notes
+
+- When `useInMemoryMongo: true` is set, any `mongoUrl` option is **ignored**
+- The in-memory server is automatically started before connecting to MongoDB
+- The in-memory server is automatically stopped when calling `testUtils.close()` or `testUtils.stop()`
+- Each test run gets a fresh, isolated MongoDB instance
+- **Safety Feature:** The cleanup helpers (`dropDatabaseBeforeEach()` and `dropCollectionsBeforeEach()`) **only work with in-memory MongoDB**. They will not drop external databases to prevent accidental data loss
+
+### TypeScript Support
+
+Full TypeScript types are provided for all in-memory MongoDB options:
+
+```typescript
+import testUtils, { FrusterTestUtilsOptions } from "@fruster/test-utils";
+
+const options: FrusterTestUtilsOptions = {
+	bus: bus,
+	useInMemoryMongo: true,
+	inMemoryMongoOptions: {
+		binary: {
+			version: "7.0.0",
+		},
+		instance: {
+			dbName: "test-db",
+			storageEngine: "ephemeralForTest",
+		},
+	},
+};
+
+const connection = await testUtils.start(options);
+```
+
+### Error Handling
+
+If you use `useInMemoryMongo: true` without installing mongodb-memory-server, you'll receive a helpful error message:
+
+```
+In-memory MongoDB support requires the "mongodb-memory-server" package.
+Install it with: pnpm add -D mongodb-memory-server
+```
+
+### Performance Tips
+
+1. **Storage Engine**: Use `storageEngine: "ephemeralForTest"` (default) for fastest performance
+2. **Binary Caching**: The MongoDB binary is downloaded once and cached. First run may be slow.
+3. **CI/CD**: Pre-download the binary in your CI setup to avoid timeouts:
+   ```bash
+   # In CI setup script
+   node -e "require('mongodb-memory-server').MongoMemoryServer.create()"
+   ```
+
+### Migration from External to In-Memory MongoDB
+
+To migrate existing tests from external MongoDB to in-memory:
+
+**Before:**
+```javascript
+testUtils.startBeforeEach({
+	service: service,
+	bus: bus,
+	mongoUrl: "mongodb://localhost:27017/test-db",
+});
+```
+
+**After:**
+```javascript
+const testHelpers = testUtils.startBeforeAll({
+	service: service,
+	bus: bus,
+	useInMemoryMongo: true,  // Use in-memory MongoDB
+});
+
+// Clean database between tests
+testHelpers.dropCollectionsBeforeEach();
+```
+
+All your existing test code using `connection.db` and `connection.client` will work without changes.
 
 ## Mock a service
 

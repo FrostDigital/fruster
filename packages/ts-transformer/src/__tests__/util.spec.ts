@@ -30,7 +30,7 @@ describe("utils", () => {
     );
 
     expect(node?.kind).toBe(ts.SyntaxKind.ClassDeclaration);
-    expect(node?.getText()).toMatch("class Handler");
+    expect(node?.getText(testFile1)).toMatch("class Handler");
   });
 
   it("should findFirstNestedChildOfKind", () => {
@@ -42,7 +42,7 @@ describe("utils", () => {
     );
 
     expect(node?.kind).toBe(ts.SyntaxKind.MethodDeclaration);
-    expect(node?.getText()).toMatch("handle(");
+    expect(node?.getText(testFile1)).toMatch("handle(");
   });
 
   it("should findFirstChildOfKindOrThrow", () => {
@@ -54,7 +54,7 @@ describe("utils", () => {
     );
 
     expect(node.kind).toBe(ts.SyntaxKind.ClassDeclaration);
-    expect(node?.getText()).toMatch("class Handler");
+    expect(node?.getText(testFile1)).toMatch("class Handler");
   });
 
   it("should findFirstChildOfKindOrThrow (and throw)", () => {
@@ -105,9 +105,9 @@ describe("utils", () => {
     const reqTypes = getFrusterRequestTypes(param as ts.ParameterDeclaration);
 
     expect(reqTypes).toBeDefined();
-    expect(reqTypes.reqBodyTypeNode?.getText()).toBe("Car");
-    expect(reqTypes.paramsTypeNode?.getText()).toBe("{ id: string }");
-    expect(reqTypes.queryTypeNode?.getText()).toBe("Query"); // TODO
+    expect(reqTypes.reqBodyTypeNode?.getText(testFile1)).toBe("Car");
+    expect(reqTypes.paramsTypeNode?.getText(testFile1)).toBe("{ id: string }");
+    expect(reqTypes.queryTypeNode?.getText(testFile1)).toBe("Query"); // TODO
   });
 
   it("should getFrusterResponseType", () => {
@@ -131,27 +131,30 @@ describe("utils", () => {
     const methodWithoutPromise = methods[0];
 
     const typeNode1 = getFrusterResponseType(
-      methodWithoutPromise.getChildAt(5) as ts.TypeReferenceNode
+      methodWithoutPromise.getChildAt(5, testFile1) as ts.TypeReferenceNode,
+      testFile1
     );
 
     expect(typeNode1).toBeDefined();
-    expect(typeNode1?.getText()).toBe("Car");
+    expect(typeNode1?.getText(testFile1)).toBe("Car");
 
     // Promise<FrusterResponse<Car>>
     const methodWithPromise = methods[1];
 
     const typeNode2 = getFrusterResponseType(
-      methodWithPromise.getChildAt(6) as ts.TypeReferenceNode
+      methodWithPromise.getChildAt(6, testFile1) as ts.TypeReferenceNode,
+      testFile1
     );
 
     expect(typeNode2).toBeDefined();
-    expect(typeNode2?.getText()).toBe("Car");
+    expect(typeNode2?.getText(testFile1)).toBe("Car");
 
     // Promise<FrusterResponse<number>>
     const methodWithPromiseAndNumber = methods[2];
 
     const typeNode3 = getFrusterResponseType(
-      methodWithPromiseAndNumber.getChildAt(6) as ts.TypeReferenceNode
+      methodWithPromiseAndNumber.getChildAt(6, testFile1) as ts.TypeReferenceNode,
+      testFile1
     );
 
     // Note: primitives are note supported

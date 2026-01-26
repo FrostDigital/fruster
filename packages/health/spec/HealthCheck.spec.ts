@@ -2,6 +2,10 @@ import { hasHealthProbe, removeHealthProbe } from "../lib/file-util";
 import HealthCheck, { HealthStatus } from "../lib/HealthCheck";
 import { startNatsServer } from "./support/test-utils";
 
+const natsIntegrationEnabled =
+	process.env.ENABLE_NATS_INTEGRATION_TESTS === "true" ||
+	process.env.ENABLE_NATS_INTEGRATION_TESTS === "1";
+
 describe("Health check", () => {
 	let healthCheck: HealthCheck;
 	let busAddress: string;
@@ -9,6 +13,12 @@ describe("Health check", () => {
 	let natsServer;
 
 	beforeEach((done) => {
+		if (!natsIntegrationEnabled) {
+			pending(
+				"NATS integration tests disabled (set ENABLE_NATS_INTEGRATION_TESTS=true to enable)",
+			);
+		}
+
 		busPort = Math.floor(Math.random() * 6000 + 2000);
 		busAddress = "nats://localhost:" + busPort;
 

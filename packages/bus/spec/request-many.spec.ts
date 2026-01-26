@@ -53,7 +53,7 @@ describe("request many", () => {
 		});
 	}
 
-	it("should return answers from all subscribers", async (done) => {
+	it("should return answers from all subscribers", async () => {
 		await bus.connect("nats://mock");
 
 		setupSubscribers();
@@ -76,11 +76,9 @@ describe("request many", () => {
 		expect(responses.find((response) => response.data.answer === 1)).toBeTruthy(
 			"Should have one answer w/ value 1"
 		);
-
-		done();
 	});
 
-	it("should be possible to limit amount of responses", async (done) => {
+	it("should be possible to limit amount of responses", async () => {
 		await bus.connect("nats://mock");
 
 		setupSubscribers(10);
@@ -100,8 +98,6 @@ describe("request many", () => {
 		expect(responses.find((response) => response.data.answer === 1)).toBeTruthy(
 			"Should have one answer w/ value 1"
 		);
-
-		done();
 	});
 });
 

@@ -32,16 +32,23 @@ export function findFirstNestedChildOfKind(
   kind: ts.SyntaxKind,
   additionalQuery?: (oNode: ts.Node) => boolean
 ): ts.Node | undefined {
-  return node.forEachChild((c) => {
-    if (c.kind === kind && (!additionalQuery || additionalQuery(c))) {
-      return c;
-    }
+  // Get source file from the root node for consistent text access
+  const sourceFile = node.getSourceFile();
 
-    if (c.getChildCount()) {
-      return findFirstNestedChildOfKind(c, kind, additionalQuery);
-    }
-    return undefined;
-  });
+  function searchNode(n: ts.Node): ts.Node | undefined {
+    return n.forEachChild((c) => {
+      if (c.kind === kind && (!additionalQuery || additionalQuery(c))) {
+        return c;
+      }
+
+      if (c.getChildCount(sourceFile)) {
+        return searchNode(c);
+      }
+      return undefined;
+    });
+  }
+
+  return searchNode(node);
 }
 
 export function findFirstChildOfKindOrThrow(
@@ -84,10 +91,15 @@ export function getFrusterRequestTypes(node: ts.ParameterDeclaration) {
   };
 }
 
-export function getFrusterResponseType(node: ts.TypeReferenceNode) {
+export function getFrusterResponseType(
+  node: ts.TypeReferenceNode,
+  sourceFile?: ts.SourceFile
+) {
   let typeNode: ts.TypeNode;
+  // In TypeScript 5.9+, we need to handle cases where node might not have source file
+  const sf = sourceFile || node.getSourceFile();
 
-  if (node.getText().indexOf("Promise") === 0) {
+  if (node.getText(sf).indexOf("Promise") === 0) {
     // Response type was wrapped in promise:
     // Promise<FrusterResponse<Foo>>
     const nestedTypeRef = findFirstChildOfKind(
