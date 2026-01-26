@@ -1,5 +1,7 @@
 # @fruster/bus
 
+## 1.3.0-alpha.6
+
 ## 1.3.0-alpha.5
 
 ## 1.3.0-alpha.4

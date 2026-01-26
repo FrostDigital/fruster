@@ -1,5 +1,11 @@
 # @fruster/test-utils
 
+## 1.3.0-alpha.6
+
+### Patch Changes
+
+- @fruster/bus@1.3.0-alpha.6
+
 ## 1.3.0-alpha.5
 
 ### Patch Changes

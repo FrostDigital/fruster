@@ -1,5 +1,14 @@
 # @fruster/runner
 
+## 1.3.0-alpha.6
+
+### Patch Changes
+
+- 8adc075: Fix fruster-runner --build to properly strip TypeScript type annotations. The build output now generates valid JavaScript that can be executed by Node.js without syntax errors.
+  - @fruster/bus@1.3.0-alpha.6
+  - @fruster/log@1.3.0-alpha.6
+  - @fruster/ts-transformer@1.3.0-alpha.6
+
 ## 1.3.0-alpha.5
 
 ### Patch Changes
