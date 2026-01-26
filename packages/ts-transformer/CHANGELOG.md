@@ -1,5 +1,7 @@
 # @fruster/ts-transformer
 
+## 1.3.0-alpha.5
+
 ## 1.3.0-alpha.4
 
 ## 1.3.0-alpha.3

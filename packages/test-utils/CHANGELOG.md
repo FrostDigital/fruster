@@ -1,5 +1,12 @@
 # @fruster/test-utils
 
+## 1.3.0-alpha.5
+
+### Patch Changes
+
+- Add reuseInMemoryMongo option for faster test execution. Share a single in-memory MongoDB instance across test suites to eliminate start/stop overhead. Requires cleanup helpers (dropCollectionsBeforeEach, dropDatabaseBeforeEach, or cleanupBeforeEach) for test isolation. Includes dynamic port allocation to prevent conflicts and stopSharedMemoryServer() for manual cleanup.
+  - @fruster/bus@1.3.0-alpha.5
+
 ## 1.3.0-alpha.4
 
 ### Patch Changes

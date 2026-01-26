@@ -17,6 +17,7 @@
     "global-mock-tracking",
     "mock-cleanup",
     "mongodb-support-minor",
+    "reuse-in-memory-mongo",
     "typescript-5-9-compatibility"
   ]
 }
