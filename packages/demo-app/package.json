@@ -24,8 +24,7 @@
     "@fruster/health": "workspace:*",
     "@fruster/log": "workspace:*",
     "@fruster/runner": "workspace:*",
-    "@types/uuid": "^8.3.4",
-    "uuid": "^8.3.2"
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "@fruster/test-utils": "workspace:*",
