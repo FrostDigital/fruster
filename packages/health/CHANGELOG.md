@@ -1,5 +1,11 @@
 # @fruster/health
 
+## 1.3.0-alpha.7
+
+### Patch Changes
+
+- 23aec1f: Clear dependency security advisories without code changes: bump `uuid` to `^11.1.1` in all packages (GHSA-w5hq-g745-h8pq backport, last major with CommonJS support), remove the unused `axios` dependency from `@fruster/bus`, raise patched floors for `ajv`, `lodash` and `minimatch`, and refresh the lockfile. Demo app specs now load via `require` so they run on Node 22.18+/24.
+
 ## 1.3.0-alpha.6
 
 ## 1.3.0-alpha.5

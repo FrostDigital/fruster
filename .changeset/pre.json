@@ -19,6 +19,7 @@
     "mock-cleanup",
     "mongodb-support-minor",
     "reuse-in-memory-mongo",
+    "security-dependency-bumps",
     "typescript-5-9-compatibility"
   ]
 }
